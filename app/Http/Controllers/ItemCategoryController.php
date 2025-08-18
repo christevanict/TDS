@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ItemCategory;
 use App\Models\Coa;
 use App\Models\Company;
+use App\Models\Item;
 use App\Models\Users;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -126,6 +127,10 @@ class ItemCategoryController extends Controller
         DB::beginTransaction();  // Begin the transaction
         try {
             $itemCategory = ItemCategory::where('item_category_code',$id);
+            $exist = Item::where('item_category',$id)->exists();
+            if($exist){
+                return redirect()->back()->with('error', 'Tidak bisa hapus karena sudah digunakan');
+            }
             $itemCategory->delete();
                 DB::commit();
 

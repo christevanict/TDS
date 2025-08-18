@@ -304,7 +304,7 @@ class SalesInvoiceController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('transaction.sales-invoice.sales_invoice_pdf', compact('salesInvoice', 'imageData', 'discTotal'));
         $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number);
-        return $pdf->stream("Factory_Order_{$nameFile}.pdf");
+        return $pdf->stream("Sales_Invoice_{$nameFile}.pdf");
     }
 
     public function summary(Request $request)
@@ -428,7 +428,7 @@ class SalesInvoiceController extends Controller
             $newNumber = '00001';
         }
 
-        return "$prefix/$newNumber";
+        return "$prefix$newNumber";
     }
 
     private function saveSalesInvoiceDetails(array $SalesInvoiceDetails, $sales_invoice_number, $company_code, $department_code,$customer_code,$general, $tax_revenue_tariff,$type) {

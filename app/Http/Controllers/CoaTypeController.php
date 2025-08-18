@@ -76,6 +76,15 @@ class CoaTypeController extends Controller
         DB::beginTransaction();
         try {
             $coa = CoaType::where('id', $id)->first();
+            $relatedModels = [
+                'SalesInvoice' => Coa::where('account_type', $id)->exists(),
+            ];
+            // Check if customer is used in any related model
+            foreach ($relatedModels as $modelName => $exists) {
+                if ($exists) {
+                    return redirect()->back()->with('error', "Tidak bisa hapus COA Type, COA Type sudah digunakan");
+                }
+            }
             if ($coa) {
                 $coa->delete();
                 DB::commit();

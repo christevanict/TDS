@@ -24,7 +24,7 @@
         >
             Tambah Baru
         </a>
-        <button type="button" class="mb-3 btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport">
+        <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport">
             Import Data
         </button>
         <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport2">

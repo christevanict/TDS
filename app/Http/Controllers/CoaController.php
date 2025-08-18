@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Coa;
 use App\Models\CoaType;
 use App\Models\Company;
+use App\Models\Journal;
 use App\Models\Users;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,15 @@ class CoaController extends Controller
         DB::beginTransaction();
         try {
             $coa = Coa::where('account_number', $id)->first();
+            $relatedModels = [
+                'SalesInvoice' => Journal::where('account_number', $id)->exists(),
+            ];
+            // Check if customer is used in any related model
+            foreach ($relatedModels as $modelName => $exists) {
+                if ($exists) {
+                    return redirect()->back()->with('error', "Tidak bisa hapus COA, COA sudah digunakan");
+                }
+            }
             if ($coa) {
                 $coa->delete();
                 DB::commit();

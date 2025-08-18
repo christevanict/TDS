@@ -55,7 +55,7 @@ class ReceivablePaymentController extends Controller
             $newNumber = '00001';
         }
 
-        return "$prefix/$newNumber";
+        return "$prefix$newNumber";
     }
 
     public function create()
@@ -237,18 +237,18 @@ class ReceivablePaymentController extends Controller
                     $invoice['nominal_payment'] = str_replace(',', '', $invoice['nominal_payment'] ?? 0);
                     $invoice['discount'] = str_replace(',', '', $invoice['discount'] ?? 0);
 
-                    if ($remaining_amount <= 0) break;
-
-                    if ($invoice['nominal_payment'] <= 0) continue; // Skip if no payment is needed
-
-                    $amount_to_apply = min($invoice['nominal_payment'], $remaining_amount);
+                    if($remaining_amount>0){
+                        $amount_to_apply = min($invoice['nominal_payment'], $remaining_amount);
+                    }else{
+                        $amount_to_apply = max($invoice['nominal_payment'], $remaining_amount);
+                    }
                     $invoices[$index]['nominal_payment'] -= $amount_to_apply;
                     $remaining_amount -= $amount_to_apply;
 
                     $payment_detail_id = $receivable_payment_number . '_' . ($index + 1);
                     $payment_method = PaymentMethod::where('payment_method_code', $rei_detail_data['payment_method'])->first();
 
-                    if ($amount_to_apply > 0) {
+                    if ($amount_to_apply != 0) {
                         ReceivablePaymentDetailPay::create([
                             'receivable_payment_number' => $receivable_payment_number,
                             'receivable_payment_date' => $receivable_payment_date,

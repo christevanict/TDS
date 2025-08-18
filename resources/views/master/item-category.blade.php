@@ -405,6 +405,9 @@
             document.getElementById('btn-action').style.display = 'inline';
         }
         // document.getElementById('item_category_code').value = item_category_code;
+        if(item_category_name.toLowerCase()=='service'){
+            document.getElementById('item_category_name').readOnly = true;
+        }
         document.getElementById('item_category_name').value = item_category_name;
         document.getElementById('company_code').value = company_code;
         let textDisplay ='';
@@ -539,6 +542,7 @@
             const resultsContainer = document.getElementById(resultsContainerId);
 
             inputElement.addEventListener('input', function () {
+                activeIndex = -1;
                 let query = this.value.toLowerCase();
                 resultsContainer.innerHTML = '';
                 resultsContainer.style.display = 'none';
@@ -570,13 +574,44 @@
                     }
                 }
             });
+            // Keydown event listener for navigation
+            inputElement.addEventListener('keydown', function(e) {
+                const items = resultsContainer.querySelectorAll('.list-group-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeIndex < items.length - 1) {
+                        activeIndex++;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeIndex > -1) { // Allow going back to no selection
+                        activeIndex--;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIndex >= 0 && items[activeIndex]) {
+                        items[activeIndex].click();
+                    }
+                }
+            });
         }
 
         function clearInput(inputId) {
             document.getElementById(inputId).value = '';
             document.getElementById(inputId).readOnly = false;
         }
-
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+            if (activeIndex >= 0) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
         setupSearch('search-acc-purchase', 'search-result-acc-purchase','acc_number_purchase');
         setupSearch('search-acc-purchase-return', 'search-result-acc-purchase-return','acc_number_purchase_return');
         setupSearch('search-acc-purchase-disc', 'search-result-acc-purchase-disc','acc_number_purchase_discount');

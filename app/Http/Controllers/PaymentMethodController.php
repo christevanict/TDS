@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PaymentMethod;
 use App\Models\Company;
 use App\Models\Coa;
+use App\Models\ReceivablePaymentDetailPay;
 use App\Models\Users;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +102,15 @@ class PaymentMethodController extends Controller
         DB::beginTransaction();  // Begin the transaction
         try {
             $pay = PaymentMethod::where('payment_method_code',$id);
+            $relatedModels = [
+                'SalesInvoice' => ReceivablePaymentDetailPay::where('payment_method', $id)->exists(),
+            ];
+            // Check if customer is used in any related model
+            foreach ($relatedModels as $modelName => $exists) {
+                if ($exists) {
+                    return redirect()->back()->with('error', "Tidak bisa hapus metode bayar karena sudah digunakan");
+                }
+            }
             $pay->delete();
             DB::commit();
 

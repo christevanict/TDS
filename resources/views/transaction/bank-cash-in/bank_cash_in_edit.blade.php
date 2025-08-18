@@ -197,6 +197,7 @@ const coas = @json($coas);
         const inputElement = document.getElementById(inputId);
         const resultsContainer = document.getElementById(resultsContainerId);
         inputElement.addEventListener('input', function () {
+            activeIndex = -1;
             let query = this.value.toLowerCase();
             resultsContainer.innerHTML = '';
             resultsContainer.style.display = 'none';
@@ -226,6 +227,38 @@ const coas = @json($coas);
                 }
             }
         });
+        // Keydown event listener for navigation
+        inputElement.addEventListener('keydown', function(e) {
+            const items = resultsContainer.querySelectorAll('.list-group-item');
+            if (items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (activeIndex < items.length - 1) {
+                    activeIndex++;
+                    updateActiveItem(items);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeIndex > -1) { // Allow going back to no selection
+                    activeIndex--;
+                    updateActiveItem(items);
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (activeIndex >= 0 && items[activeIndex]) {
+                    items[activeIndex].click();
+                }
+            }
+        });
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+            if (activeIndex >= 0) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
     }
     function clearInput(inputId) {
         document.getElementById(inputId).value = '';

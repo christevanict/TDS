@@ -172,7 +172,7 @@ $totalAmount = $salesInvoice->details->sum(function ($detail) {
                     </tr>
                     <tr>
                         <td>Contract Number #</td>
-                        <td style=" text-align:left;" {{ $salesInvoice->contract_number ?? '' }}</td>
+                        <td style=" text-align:left;"> {{ $salesInvoice->contract_number ?? '' }}</td>
                     </tr>
                     <tr>
                         <td>Due Date</td>

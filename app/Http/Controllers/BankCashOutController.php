@@ -51,7 +51,7 @@ class BankCashOutController extends Controller
             $newNumber = '00001';
         }
 
-        return "$prefix/$newNumber";
+        return "$prefix$newNumber";
     }
 
     public function create() {

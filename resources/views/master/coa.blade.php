@@ -28,11 +28,11 @@
                 Tambah Baru
             </button>
             <a style="font-size:25px"> | </a>
-            <button type="button" class="mb-3 btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport">
+            <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport">
                 Import Data
             </button>
 
-            <a href="{{ route('coa.export') }}" class="mb-3 btn btn-secondary">Download Template <i class="fa fa-download"></i>
+            <a href="{{ route('coa.export') }}" class="mb-3 btn btn-secondary d-none">Download Template <i class="fa fa-download"></i>
             </a>
 
             <div class="table-responsive">

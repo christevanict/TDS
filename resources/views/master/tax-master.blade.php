@@ -119,13 +119,16 @@
                             @endforeach
                         </select>
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Account Number</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="account_number" name="account_number" required>
-                            @foreach ($coas as $coa)
-                                <option data-company="{{$coa->company_code}}" value={{$coa->account_number}}>{{$coa->account_number.' - '.$coa->account_name}}</option>
-                            @endforeach
-                        </select>
+                    <label for="exampleInputEmail1" class="form-label">Account Receivable</label>
+                    <div class="form-group mb-3">
+                        <div class="input-group">
+                            <input type="text" id="search-acc" class="form-control" placeholder="Search by Account Number or Account Name" autocomplete="off" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearInput('search-acc')"><i class="material-icons-outlined">edit</i></button>
+                        </div>
+                        <div id="search-result-acc" class="list-group" style="display:none; position:relative; z-index:1000; width:100%; max-height:200px; overflow:scroll;">
+                            <!-- Search results will be injected here -->
+                        </div>
+                        <input type="hidden" name="account_number" id="account_number">
                     </div>
                     <button id="btn-action" name="btn-action" type="submit" class="btn btn-primary btn-md">Insert</button>
                     <button type="button" class="btn btn-danger" id="cancelButton" style="display:none;" data-bs-dismiss="modal" onclick="cancelEdit()">Cancel</button>
@@ -211,6 +214,9 @@
             }else{
                 document.getElementById('btn-action').disabled =false
             }
+            document.getElementById('search-acc').value = '';
+            document.getElementById('search-acc').readOnly = false;
+            document.getElementById('account_number').value = '';
         }
 
 
@@ -230,27 +236,95 @@
             }
             document.getElementById('btn-action').innerText = 'Edit';
             document.getElementById('tax-master-form').action = `/TDS/master/tax-master/edit/${id}`;
-        }
-    </script>
-
-<script>
-    var companySelect = document.getElementById('company_code');
-    var accountNumberSelect = document.getElementById('account_number');
-
-    // Add event listener for when the company is selected
-    companySelect.addEventListener('change', function() {
-        var selectedCompany = this.value;
-        accountNumberSelect.value = '';
-        for (var i = 0; i < accountNumberSelect.options.length; i++) {
-            var optionNumber = accountNumberSelect.options[i];
-            var coaCompanyCode = optionNumber.getAttribute('data-company');
-            if (selectedCompany === "" || coaCompanyCode === selectedCompany) {
-                optionNumber.style.display = 'block';
-            } else {
-                optionNumber.style.display = 'none';
+            if(account_number){
+                document.getElementById('account_number').value = account_number;
+                let textDisplay = coas.find((element)=>element.account_number ==account_number)?.account_name; // Added optional chaining
+                if (textDisplay) {
+                    document.getElementById('search-acc').value = account_number+' - '+textDisplay;
+                    document.getElementById('search-acc').readOnly = true;
+                } else {
+                    document.getElementById('search-acc').value = account_number; // Show just number if name not found
+                    document.getElementById('search-acc').readOnly = true;
+                }
             }
         }
-        accountNumberSelect.value = '';
-    });
-</script>
+
+        const coas = @json($coas);
+
+        function setupSearch(inputId, resultsContainerId,inputHid) {
+            const inputElement = document.getElementById(inputId);
+            const resultsContainer = document.getElementById(resultsContainerId);
+
+            inputElement.addEventListener('input', function () {
+                activeIndex = -1;
+                let query = this.value.toLowerCase();
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
+
+                if (query.length > 0) {
+                    let filteredResults = coas.filter(item =>
+                        item.account_number.toLowerCase().includes(query) ||
+                        item.account_name.toLowerCase().includes(query)
+                    );
+
+                    if (filteredResults.length > 0) {
+                        resultsContainer.style.display = 'block';
+                        filteredResults.forEach(item => {
+                            let listItem = document.createElement('a');
+                            listItem.className = 'list-group-item list-group-item-action';
+                            listItem.href = '#';
+                            listItem.innerHTML = `
+                                <strong>${item.account_number}</strong> -
+                                ${item.account_name} <br>`;
+                            listItem.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                inputElement.value = item.account_number + ' - ' + item.account_name;
+                                inputElement.readOnly = true;
+                                document.getElementById(inputHid).value = item.account_number;
+                                resultsContainer.style.display = 'none';
+                            });
+                            resultsContainer.appendChild(listItem);
+                        });
+                    }
+                }
+            });
+            // Keydown event listener for navigation
+            inputElement.addEventListener('keydown', function(e) {
+                const items = resultsContainer.querySelectorAll('.list-group-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeIndex < items.length - 1) {
+                        activeIndex++;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeIndex > -1) { // Allow going back to no selection
+                        activeIndex--;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIndex >= 0 && items[activeIndex]) {
+                        items[activeIndex].click();
+                    }
+                }
+            });
+        }
+        function clearInput(inputId) {
+            document.getElementById(inputId).value = '';
+            document.getElementById(inputId).readOnly = false;
+        }
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+            if (activeIndex >= 0) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+        setupSearch('search-acc', 'search-result-acc','account_number');
+    </script>
 @endsection

@@ -33,14 +33,14 @@
                         data-bs-target="#modalInput" @if(!in_array('create', $privileges)) disabled @endif>
                         Tambah Baru
                     </button>
-                    <a style="font-size:25px"> | </a>
-                    <button type="button" class="mb-3 btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport" @if(!in_array('create', $privileges)) disabled @endif>
+                    {{-- <a style="font-size:25px"> | </a> --}}
+                    <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport" @if(!in_array('create', $privileges)) disabled @endif>
                         Import
                     </button>
                     <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport2" @if(!in_array('create', $privileges)) disabled @endif>
                         Import Extra
                     </button>
-                    <a href="{{ route('customer.export') }}" class="mb-3 btn btn-secondary">Download Template <i class="fa fa-download"></i>
+                    <a href="{{ route('customer.export') }}" class="mb-3 btn btn-secondary d-none">Download Template <i class="fa fa-download"></i>
                     </a>
 
 				<div class="table-responsive">
@@ -591,6 +591,7 @@
             const resultsContainer = document.getElementById(resultsContainerId);
 
             inputElement.addEventListener('input', function () {
+                activeIndex = -1;
                 let query = this.value.toLowerCase();
                 resultsContainer.innerHTML = '';
                 resultsContainer.style.display = 'none';
@@ -622,10 +623,42 @@
                     }
                 }
             });
+            // Keydown event listener for navigation
+            inputElement.addEventListener('keydown', function(e) {
+                const items = resultsContainer.querySelectorAll('.list-group-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeIndex < items.length - 1) {
+                        activeIndex++;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeIndex > -1) { // Allow going back to no selection
+                        activeIndex--;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIndex >= 0 && items[activeIndex]) {
+                        items[activeIndex].click();
+                    }
+                }
+            });
         }
         function clearInput(inputId) {
             document.getElementById(inputId).value = '';
             document.getElementById(inputId).readOnly = false;
+        }
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+            if (activeIndex >= 0) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
         }
         setupSearch('search-acc-receivable', 'search-result-acc-receivable','account_receivable');
         setupSearch('search-acc-receivable-1', 'search-result-acc-receivable-1','account_receivable_1');

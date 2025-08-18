@@ -165,6 +165,15 @@ class CustomerController extends Controller
         DB::beginTransaction();  // Begin the transaction
         try {
             $customer = Customer::where('customer_code',$id);
+            $relatedModels = [
+                'SalesInvoice' => SalesInvoice::where('customer_code', $id)->exists(),
+            ];
+            // Check if customer is used in any related model
+            foreach ($relatedModels as $modelName => $exists) {
+                if ($exists) {
+                    return redirect()->back()->with('error', "Tidak bisa hapus pelanggan, pelanggan sudah digunakan");
+                }
+            }
             $customer->delete();
 
             DB::commit();

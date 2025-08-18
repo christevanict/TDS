@@ -137,7 +137,7 @@
                                             class="material-icons-outlined">category</i>Kategori Jasa</a>
                                 </li>
                             </ul>
-                            <ul>
+                            <ul class="d-none">
                                 <li><a href="/TDS/master/item-unit"><i class="material-icons-outlined">category</i>Unit Jasa</a>
                                 </li>
                             </ul>
