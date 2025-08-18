@@ -75,7 +75,6 @@
                             <th>{{__('Customer Code')}}</th>
                             <th>{{__('Group Customer')}}</th>
                             <th>{{__('Customer')}}</th>
-                            <th>Status Kirim</th>
                             @if(in_array('price', $privileges))
                             <th>Total</th>
                             @endif
@@ -88,7 +87,6 @@
                             <th><input type="text" class="form-control" placeholder="Filter Grup Pelanggan" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Nama Pelanggan" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Nominal" data-sort="false"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter Status" data-sort="false"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,7 +100,6 @@
                                     {{ $customers->firstWhere(fn($customer) => $invoice->customers->group_customer === $customer->customer_code)?->customer_name ?? '' }}
                                 </td>
                                 <td>{{ $invoice->customers->customer_name }}</td>
-                                <td>{{ $invoice->status=='Delivered'?'Terkirim':'Belum' }}</td>
                                 @if(in_array('price', $privileges))
                                 <td class="text-end">{{ number_format($invoice->total,0) }}</td>
                                 @endif
@@ -112,7 +109,7 @@
                     <tfoot>
                         <tr class="total-amount-row">
                             @if(in_array('price', $privileges))
-                            <td colspan="7">Total untuk range tanggal terpilih:</td>
+                            <td colspan="6">Total untuk range tanggal terpilih:</td>
                             <td>{{ number_format($totalAmount,0) }}</td>
                             @endif
                         </tr>
@@ -182,7 +179,7 @@
                     return;
                 }
                 let total = 0;
-                table.column(7, { search: 'applied' }).data().each(function(value) {
+                table.column(6, { search: 'applied' }).data().each(function(value) {
                     let numericValue = parseFloat(value.replace(/,/g, '')) || 0;
                     total += numericValue;
                 });

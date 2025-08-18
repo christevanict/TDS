@@ -391,14 +391,13 @@ class SalesInvoiceController extends Controller
         $salesInvoices = $query->with('details')->where('department_code','DP01')->orderBy('id','asc')->get();
         $pbr = $query2->with('details')->where('department_code','DP01')->orderBy('id','asc')->get();
         $salesInvoices = $salesInvoices->concat($pbr);
-        $customers = Customer::where('department_code','DP01')->get();
 
         // Calculate the total amount from all filtered sales invoices
         $totalAmount = $salesInvoices->sum('subtotal');
         $privileges = Auth::user()->roles->privileges['sales_invoice'];
 
         // Return the view with the sales invoices data and total amount
-        return view('transaction.sales-invoice.sales_invoice_summary_detail', compact('salesInvoices', 'totalAmount','privileges','customers'))
+        return view('transaction.sales-invoice.sales_invoice_summary_detail', compact('salesInvoices', 'totalAmount','privileges'))
         ->with([
             'from_date' => $request->input('from_date'),
             'to_date' => $request->input('to_date')

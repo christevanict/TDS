@@ -79,10 +79,8 @@
                             <th>{{__('Document Date')}}</th>
                             <th>{{__('Sales Invoice Number')}}</th>
                             <th>Kode {{__('Customer')}}</th>
-                            <th>Grup {{__('Customer')}}</th>
                             <th>Nama {{__('Customer')}}</th>
                             <th>Nama Barang</th>
-                            <th>COLY</th>
                             <th>QTY</th>
                             <th>Harga</th>
                             @if(in_array('discount', $privileges))
@@ -91,17 +89,14 @@
                             @if(in_array('price', $privileges))
                             <th>Nominal</th>
                             @endif
-                            <th>Status Kirim</th>
                         </tr>
                         <tr class="filter-row">
                             <th></th> <!-- Empty for No -->
                             <th><input type="text" class="form-control" placeholder="Filter Date" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter SI Number" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Kode" data-sort="false"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter Grup" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Nama" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Barang" data-sort="false"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter COLY" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter QTY" data-sort="false"></th>
                             <th><input type="text" class="form-control" placeholder="Filter Harga" data-sort="false"></th>
                             @if(in_array('discount', $privileges))
@@ -110,7 +105,6 @@
                             @if(in_array('price', $privileges))
                             <th><input type="text" class="form-control" placeholder="Filter Nominal" data-sort="false"></th>
                             @endif
-                            <th><input type="text" class="form-control" placeholder="Filter Status" data-sort="false"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -127,13 +121,9 @@
                             <td>{{ \Carbon\Carbon::parse($invoice->document_date)->format('d M Y') }}</td>
                             <td>{{ $invoice->sales_invoice_number??$invoice->pbr_number }}</td>
                             <td>{{ $invoice->customers->customer_code }}</td>
-                            <td>
-                                {{ $customers->firstWhere(fn($customer) => $invoice->customers->group_customer === $customer->customer_code)?->customer_name ?? '' }}
-                            </td>
                             <td>{{ $invoice->customers->customer_name }}</td>
                             <td>{{$detail->items->item_name}}</td>
                             <td>{{number_format($detail->qty,0)}}</td>
-                            <td>{{number_format(($detail->qty*$detail->base_qty),0)}}</td>
                             <td>{{number_format(($detail->price),0)}}</td>
                             @if(in_array('discount', $privileges))
                             <td>{{number_format(($detail->disc_nominal+($detail->disc_percent*$detail->qty*$detail->base_qty*$detail->price)),0)}}</td>
@@ -141,7 +131,6 @@
                             @if(in_array('price', $privileges))
                             <td class="text-end">{{ number_format($detail->nominal,0) }}</td>
                             @endif
-                            <td>{{$invoice->status=='Delivered'?'Terkirim':'Belum'}}</td>
                         </tr>
                         @endforeach
                         @endforeach
@@ -149,9 +138,8 @@
                     <tfoot>
                         <tr class="total-amount-row">
                             @if(in_array('price', $privileges))
-                            <td colspan="11">Total untuk range tanggal terpilih:</td>
+                            <td colspan="9">Total untuk range tanggal terpilih:</td>
                             <td>{{ number_format($totalAmount,0) }}</td>
-                            <td></td>
                             @endif
                         </tr>
                     </tfoot>
@@ -207,7 +195,7 @@
                 table = $('#example').DataTable({
                     lengthChange: false,
                     orderCellsTop: true,
-                        buttons: ['copy', 'excel', 'pdf', 'print'], 
+                        buttons: ['copy', 'excel', 'pdf', 'print'],
                     drawCallback: function() {
                         console.log('drawCallback triggered');
                         calculateTotalAmount();
@@ -246,7 +234,7 @@
                 @if(in_array('price', $privileges))
                     console.log('Calculating total amount...');
                     let total = 0;
-                    table.column(11, { search: 'applied' }).data().each(function(value) {
+                    table.column(9, { search: 'applied' }).data().each(function(value) {
                         if (value && typeof value === 'string') {
                             console.log('Processing value:', value);
                             let numericValue = parseFloat(value.replace(/,/g, '')) || 0;
