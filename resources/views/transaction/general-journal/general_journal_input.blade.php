@@ -268,39 +268,69 @@ const coas = @json($coas);
         addInputListeners(); // Set up listeners for existing inputs
 
         document.getElementById('general-journal-form').addEventListener('submit', function (event) {
+            event.preventDefault();
             const { totalDebit, totalCredit } = calculateTotals();
             let isValid = true;
 
-            // Check if totals are equal
-            if (totalDebit !== totalCredit) {
-                isValid = false; // Prevent form submission
-                Swal.fire({
-                    title: 'Warning!',
-                    html: `<ul>
-                        The total debits and credits do not match!
-                    </ul>`,
-                    icon: 'warning',
-                    confirmButtonText: 'OK'
-                });
-            }
+            const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+            $.ajax({
+                url: '{{ route("checkDateToPeriode") }}',
+                type: 'POST',
+                data: {
+                    date: documentDate,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response != true) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Date',
+                            text: 'Tidak bisa input tanggal pada periode non aktif!',
+                        });
+                        return; // Stop further execution
+                    }
+                    // Check if totals are equal
+                    if (totalDebit !== totalCredit) {
+                        isValid = false; // Prevent form submission
+                        Swal.fire({
+                            title: 'Warning!',
+                            html: `<ul>
+                                The total debits and credits do not match!
+                            </ul>`,
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                    }
 
-            $('#cash-out-details-table tbody tr').each(function(index) {
-                const debet = $(this).find(`input[name="details[${index}][nominal_debet]"]`).val().replace(/,/g, '');
-                const credit = $(this).find(`input[name="details[${index}][nominal_credit]"]`).val().replace(/,/g, '');
+                    $('#cash-out-details-table tbody tr').each(function(index) {
+                        const debet = $(this).find(`input[name="details[${index}][nominal_debet]"]`).val().replace(/,/g, '');
+                        const credit = $(this).find(`input[name="details[${index}][nominal_credit]"]`).val().replace(/,/g, '');
 
-                if (debet>0 && credit>0) {
+                        if (debet>0 && credit>0) {
+                            Swal.fire({
+                            title: 'Warning!',
+                            html: `<ul>
+                                Only one of Nominal Debet or Nominal Credit can be filled for row ${index+1}.
+                            </ul>`,
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                            isValid = false;
+                        }
+                    });
+                    if (isValid){
+                        document.getElementById('general-journal-form').submit();
+                    }
+                },
+                error: function(xhr) {
+                    console.log(xhr);
                     Swal.fire({
-                    title: 'Warning!',
-                    html: `<ul>
-                        Only one of Nominal Debet or Nominal Credit can be filled for row ${index+1}.
-                    </ul>`,
-                    icon: 'warning',
-                    confirmButtonText: 'OK'
-                });
-                    isValid = false;
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to validate date. Please try again.',
+                    });
                 }
             });
-            if (!isValid) event.preventDefault();
         });
 
         // Add row functionality

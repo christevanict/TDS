@@ -320,6 +320,40 @@ const coas = @json($coas);
             }
         });
     });
+
+    document.getElementById('bank-cash-in-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+        $.ajax({
+            url: '{{ route("checkDateToPeriode") }}',
+            type: 'POST',
+            data: {
+                date: documentDate,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response != true) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Date',
+                        text: 'Tidak bisa input tanggal pada periode !',
+                    });
+                    return; // Stop further execution
+                }
+
+                // All validations passed, submit form
+                document.getElementById('bank-cash-in-form').submit();
+            },
+            error: function(xhr) {
+                console.log(xhr);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to validate date. Please try again.',
+                });
+            }
+        });
+    });
 </script>
 @endsection
 @endsection

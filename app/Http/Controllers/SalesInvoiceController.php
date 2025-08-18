@@ -33,6 +33,7 @@ use App\Models\PayablePaymentDetail;
 use App\Models\ReceivableListDetail;
 use App\Models\ReceivableListSalesmanDetail;
 use App\Models\Pbr;
+use App\Models\Periode;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -49,6 +50,261 @@ class SalesInvoiceController extends Controller
         $privileges = Auth::user()->roles->privileges['sales_invoice'];
 
         return view('transaction.sales-invoice.sales_invoice_list', compact('salesInvoices','privileges'));
+    }
+
+    public function create() {
+        $companies = Company::all();
+        $customers = Customer::get();
+        $items = ItemSalesPrice::where('department_code','DP01')->whereHas('items')->orderBy('item_code')->distinct('item_code')->with('items', 'unitn','itemDetails','items.warehouses')->get();
+        $itemDetails = ItemDetail::where('department_code','DP01')->where('status',true)->get();
+        $itemUnits = ItemUnit::all();
+        $taxs = TaxMaster::where('tax_code','!=','PPN')->get();
+        $department_TDS = 'DP01';
+        $department_TDSn = Department::where('department_code', $department_TDS)->first();
+
+        $salesOrder = SalesOrder::where('status','!=','Cancelled')->with([
+            'department',
+            'details' => function ($query) {
+                $query->where('qty_left', '>', 0)
+                    ->with(['items','items.warehouses', 'units']);
+            }
+        ])
+        ->orderBy('id', 'asc')
+        ->where('status', '!=', 'Closed')
+        ->where('department_code', 'DP01')
+        ->get();
+        $privileges = Auth::user()->roles->privileges['sales_invoice'];
+
+        $token = str()->random(16);
+        return view('transaction.sales-invoice.sales_invoice_input', compact('companies', 'items', 'customers', 'customers', 'taxs','department_TDS', 'department_TDSn','salesOrder','privileges','items','itemDetails','itemUnits','token'));
+    }
+
+    public function store(Request $request) {
+        // dd($request->all());
+
+        $exist = SalesInvoice::where('token',$request->token)->where('department_code','DP01')->whereDate('created_at',Carbon::today())->first();
+        if($exist){
+            $id = SalesInvoice::where('created_by',Auth::user()->username)->orderBy('id','desc')->select('id')->first()->id;
+            return redirect()->route('transaction.sales_invoice.create')->with('success', 'Sales Invoice created successfully.')->with('id',$id);
+        }
+
+        DB::beginTransaction(); // Begin transaction to ensure atomicity
+        try {
+            $sales_invoice_number = $this->generateSalesInvoiceNumber($request->document_date);
+
+            if(SalesInvoice::where('sales_invoice_number', $request->sales_invoice_number)->count() < 1) {
+
+            $general = new SalesInvoice();
+            $general->sales_invoice_number = $sales_invoice_number;
+            $general->contract_number = $request->contract_number;
+            $general->document_date = $request->document_date;
+            $general->due_date = $request->due_date;
+            $general->customer_code = $request->customer_code;
+            $general->token = $request->token;
+            $general->tax = 'PPN';
+            $general->status = 'Open';
+            $general->disc_nominal = str_replace(',', '', $request->disc_nominal??0);
+            // $general->con_invoice = $request->con_invoice;
+            // $general->status = 'Open';
+
+
+            $general->notes = $request->notes;
+            $general->company_code = $request->company_code;
+            $general->department_code = $request->department_code;
+            $general->created_by = Auth::user()->username;
+            $general->updated_by = Auth::user()->username;
+
+            // Save the main cash in entry
+            $tax_revenue_tariff=0;
+            if($request->tax_revenue!=0){
+                $tax_revenue_tariffs = TaxMaster::where('tax_code',$request->tax_revenue)->first();
+                $tax_revenue_tariff = $tax_revenue_tariffs->tariff;
+            }
+            $general->tax_revenue_tariff = $request->tax_revenue;
+
+            // Save the details
+            $this->saveSalesInvoiceDetails($request->details, $sales_invoice_number, $request->company_code, $request->department_code,$request->customer_code,$general, $tax_revenue_tariff,'store');
+
+            $id = SalesInvoice::where('sales_invoice_number',$sales_invoice_number)->select('id')->first()?SalesInvoice::where('sales_invoice_number',$sales_invoice_number)->select('id')->first()->id:84;
+
+            DB::commit(); // Commit transaction
+            return redirect()->route('transaction.sales_invoice.create')->with('success', 'Sales Invoice created successfully.')->with('id',$id);
+
+            } else {
+                return redirect()->back()->with('error', 'Sales Invoice Number must not be the same');
+            };
+
+
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction on error
+            // dd($e);
+            Log::error($e->getMessage());
+            return redirect()->back()->with('error', 'Failed to create Sales Invoice: ' . $e->getMessage());
+        }
+    }
+
+    public function edit($id) {
+        try {
+            $companies = Company::all();
+            $departments = Department::where('department_code', 'DP01')->first();
+            $coas = Coa::all();
+            $items = ItemSalesPrice::where('department_code','DP01')->whereHas('items')->orderBy('item_code')->distinct('item_code')->with('items', 'unitn','itemDetails','items.warehouses')->get();
+            $itemUnits = ItemUnit::all();
+            $itemDetails = ItemDetail::where('department_code','DP01')->where('status',true)->get();
+            $customers = Supplier::all();
+            $customers = Customer::get();
+            $taxs = TaxMaster::where('tax_code','!=','PPN')->get();
+            $warehouses = Warehouse::all();
+
+            $salesInvoice = SalesInvoice::with('details')->findOrFail($id);
+
+            // dd($SalesInvoice);
+            $department_TDS = 'DP01';
+            $department_TDSn = Department::where('department_code', $department_TDS)->first();
+            $salesInvoiceDetails = SalesInvoiceDetail::where('sales_invoice_number', $salesInvoice->sales_invoice_number)->with(['items','units'])->orderBy('id','asc')->get();
+
+
+            // Format dates for display
+            $salesInvoice->document_date = Carbon::parse($salesInvoice->document_date)->format('Y-m-d');
+
+            $salesInvoice->due_date = Carbon::parse($salesInvoice->due_date)->format('Y-m-d');
+
+            $editable = true;
+            $payable = ReceivablePaymentDetail::where('document_number',$salesInvoice->sales_invoice_number)->get();
+            // $returns = SalesReturn::where('sales_invoice_number',$salesInvoice->sales_invoice_number)->get();
+            $notes = SalesDebtCreditNote::where('invoice_number',$salesInvoice->sales_invoice_number)->get();
+            $editable = (count($payable) > 0 || count($notes) > 0) ? false : true;
+            $note='';
+            $periodeClosed = Periode::where('periode_active', 'closed')
+            ->where('periode_start', '<=', $salesInvoice->document_date)
+            ->where('periode_end', '>=', $salesInvoice->document_date)
+            ->first();
+            if(count($payable) > 0 ){
+                $note.='Sudah dibayar <br>';
+            }
+            if($periodeClosed){
+                $note.='Sudah di Closing <br>';
+                $editable = false;
+            }
+            $privileges = Auth::user()->roles->privileges['sales_invoice'];
+
+            return view('transaction.sales-invoice.sales_invoice_edit', compact('salesInvoice', 'salesInvoiceDetails', 'companies', 'departments', 'coas', 'items', 'itemUnits', 'itemDetails', 'customers', 'customers', 'taxs', 'department_TDS', 'department_TDSn', 'editable','warehouses','privileges','note'));
+        } catch (\Exception $e) {
+            dd($e);
+            return redirect()->back()->with('error', 'Failed to load edit form: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        // dd($request->all());
+        DB::beginTransaction(); // Start the transaction
+        try {
+            // Retrieve the SalesInvoice record by sales_invoice_number
+
+            $general = SalesInvoice::where('id', $id)->firstOrFail();
+            $sales_invoice_number = $general->sales_invoice_number;
+            $general->contract_number = $request->contract_number;
+            $general->tax_revenue_tariff = $request->tax_revenue;
+            $general->document_date = $request->document_date;
+            $general->due_date = $request->due_date;
+            $general->reason = $request->edit_reason??'';
+            $general->tax = 'PPN';
+
+            $general->disc_nominal = str_replace(',', '', $request->disc_nominal??0);
+            // $general->con_invoice = $request->con_invoice;
+            // $general->status = 'Open';
+
+            $general->notes = $request->notes;
+            $general->created_by = Auth::user()->username;
+            $general->updated_by = Auth::user()->username;
+
+            // Save the main cash in entry
+            $tax_revenue_tariff=0;
+            if($request->tax_revenue!=0){
+                $tax_revenue_tariffs = TaxMaster::where('tax_code',$request->tax_revenue)->first();
+                $tax_revenue_tariff = $tax_revenue_tariffs->tariff;
+            }
+
+            $oldDetail  = SalesInvoiceDetail::where('sales_invoice_number', $sales_invoice_number)->get();
+            InventoryDetail::where('document_number', $general->sales_invoice_number)->delete();
+            Receivable::where('document_number', $sales_invoice_number)->delete();
+            Journal::where('document_number', $general->sales_invoice_number)->delete();
+            SalesInvoiceDetail::where('sales_invoice_number', $general->sales_invoice_number)->delete();
+
+            // Save the details
+            $this->saveSalesInvoiceDetails($request->details, $sales_invoice_number, $request->company_code, $request->department_code,$request->customer_code,$general, $tax_revenue_tariff,'update');
+            // Parse and assign date fields
+            DB::commit(); // Commit the transaction
+            return redirect()->route('transaction.sales_invoice')->with('success', 'Sales Invoice updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction on error
+            // dd($e);
+            Log::error($e);
+            return redirect()->back()->with('error', 'Failed to update Sales Invoice: ' . $e->getMessage());
+        }
+    }
+
+
+
+    public function destroy(Request $request, $id) {
+        DB::beginTransaction();
+        try {
+            $general = SalesInvoice::findOrFail($id);
+            SalesInvoice::where('sales_invoice_number', $general->sales_invoice_number)->delete();
+            SalesInvoiceDetail::where('sales_invoice_number', $general->sales_invoice_number)->delete();
+            $general->delete();
+            InventoryDetail::where('document_number', $general->sales_invoice_number)->delete();
+
+            Journal::where('document_number',$general->sales_invoice_number)->delete();
+            Receivable::where('document_number',$general->sales_invoice_number)->delete();
+
+
+            $reason = $request->input('reason');
+
+            DeleteLog::create([
+                'document_number' => $general->sales_invoice_number,
+                'document_date' => $general->document_date,
+                'delete_notes' => $reason,
+                'type' => 'SI',
+                'company_code' => $general->company_code,
+                'department_code' => $general->department_code,
+                'deleted_by' => Auth::user()->username,
+            ]);
+
+            DB::commit(); // Commit transaction
+            return redirect()->route('transaction.sales_invoice')->with('success', 'Sales Invoice deleted successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            dd($e);
+            Log::error($e);
+            return redirect()->route('transaction.sales_invoice')->with('error', 'Error deleting: ' . $e->getMessage());
+        }
+    }
+
+    public function printSalesInvoicePDF($sales_invoice_number)
+    {
+        $salesInvoice = SalesInvoice::with([
+            'company',
+            'customers',
+            'details' => function ($query) {
+                $query->orderBy('id', 'asc');
+            },
+        ])->findOrFail($sales_invoice_number);
+
+        $discTotal = 0;
+        foreach($salesInvoice->details as $detail){
+            $discTotal += ($detail->disc_nominal + ($detail->disc_percent / 100) * ($detail->qty * $detail->price));
+        }
+
+
+        $imagePath = storage_path('app/images/logo.jpg');
+        $imageData = file_get_contents($imagePath);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('transaction.sales-invoice.sales_invoice_pdf', compact('salesInvoice', 'imageData', 'discTotal'));
+        $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number);
+        return $pdf->stream("Factory_Order_{$nameFile}.pdf");
     }
 
     public function summary(Request $request)
@@ -149,344 +405,6 @@ class SalesInvoiceController extends Controller
         ]);
     }
 
-    public function approval() {
-        $companies = Company::all();
-        $departments = Department::where('department_code', 'DP01')->first();
-        $salesInvoices = SalesInvoice::where('status', 'Ready')->get();
-        $coas = COA::all();
-        $customers = Supplier::all();
-        $customers = Customer::whereNot(function ($query) {
-            $query->where('customer_code', 'like', 'DP02%')
-                ->orWhere('customer_code', 'like', 'DP03%');
-        })->get();
-        $prices = ItemSalesPrice::where('department_code','DP01')->get();
-        $taxs = TaxMaster::all();
-
-        return view('transaction.approval.sales_invoice_list', compact('companies', 'departments', 'salesInvoices', 'coas',  'customers', 'customers', 'prices', 'taxs'));
-    }
-
-    public function showImage($filename)
-    {
-        $path = storage_path('app/images/' . $filename);
-
-        if (!file_exists($path)) {
-            abort(404); // If the file doesn't exist, return a 404 error
-        }
-
-        // Optionally, you can add authorization checks here to control access
-        // dd('a');
-        return response()->file($path);
-    }
-
-    public function printSalesInvoiceAll($sales_invoice_number)
-    {
-        // Retrieve the sales invoice with related data
-        $salesInvoice = SalesInvoice::with([
-            'company',
-            'department',
-            'customers',
-            'details' => function ($query) {
-                $query->orderBy('id', 'asc');
-            },
-            'details.items.itemDetails.unitConversion', // Nested relationships still load
-        ])->findOrFail($sales_invoice_number);
-        // dd($salesInvoice);
-        $totalDiscount= 0;
-        foreach ($salesInvoice->details as $key => $value) {
-            $subtotal = $value->qty*$value->base_qty*$value->price;
-            $totalDiscount+= ($subtotal *$value->disc_percent/100) +$value->disc_nominal;
-        }
-
-        $soNumber = explode(",",$salesInvoice->details[0]->sales_order_number)[0];
-        if( SalesOrder::where('sales_order_number',$soNumber)->first()){
-            $customerOrigin = SalesOrder::where('sales_order_number',$soNumber)->first()->customers;
-        }else{
-            $customerOrigin = Customer::where('customer_code',$salesInvoice->customers->group_customer)->first();
-        }
-
-        // Group the invoice details by item_id (if needed)
-
-        // Generate and return the PDF
-        $totalHuruf = ucfirst($this->numberToWords($salesInvoice->total)).' rupiah';
-        $tax = TaxMaster::where('tax_code','PPN')->first();
-        return view('transaction.sales-invoice.sales_invoice_print_all', compact('salesInvoice','totalHuruf','tax','customerOrigin','totalDiscount'));
-
-        // Create a safe file name by removing any unwanted characters
-        $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number); // Ensure you have a valid 'sales_invoice_number' property
-
-        // Stream the PDF to the browser
-        return $pdf->stream("Sales_Invoice_{$nameFile}.pdf");
-    }
-    public function printSalesInvoicePDF($sales_invoice_number)
-    {
-        $salesInvoice = SalesInvoice::with([
-            'company',
-            'customers',
-            'details' => function ($query) {
-                $query->orderBy('id', 'asc');
-            },
-        ])->findOrFail($sales_invoice_number);
-
-        $discTotal = 0;
-        foreach($salesInvoice->details as $detail){
-            $discTotal += ($detail->disc_nominal + ($detail->disc_percent / 100) * ($detail->qty * $detail->price));
-        }
-
-
-        $imagePath = storage_path('app/images/logo.jpg');
-        $imageData = file_get_contents($imagePath);
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('transaction.sales-invoice.sales_invoice_pdf', compact('salesInvoice', 'imageData', 'discTotal'));
-        $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number);
-        return $pdf->stream("Factory_Order_{$nameFile}.pdf");
-    }
-    public function printSalesInvoicePDFDo($sales_invoice_number)
-    {
-        // Retrieve the sales invoice with related data
-        $salesInvoice = SalesInvoice::with([
-            'company',
-            'department',
-            'customers',
-            'details' => function ($query) {
-                $query->orderBy('id', 'asc');
-            },
-            'details.items.itemDetails.unitConversion', // Nested relationships still load
-        ])->findOrFail($sales_invoice_number);
-        // dd($salesInvoice);
-        $soNumber = explode(",",$salesInvoice->details[0]->sales_order_number)[0];
-        if( SalesOrder::where('sales_order_number',$soNumber)->first()){
-            $customerOrigin = SalesOrder::where('sales_order_number',$soNumber)->first()->customers;
-        }else{
-            $customerOrigin = Customer::where('customer_code',$salesInvoice->customers->group_customer)->first();
-        }
-
-        // Group the invoice details by item_id (if needed)
-        $groupedDetails = $salesInvoice->details->groupBy('item_id');
-
-        // Generate and return the PDF
-        $totalHuruf = ucfirst($this->numberToWords($salesInvoice->total)).' rupiah';
-        // return view('transaction.sales-invoice.sales_invoice_do_print_webservice', compact('salesInvoice'));
-        return view('transaction.sales-invoice.sales_invoice_do_pdf', compact('salesInvoice', 'groupedDetails','totalHuruf','customerOrigin'));
-
-        // Create a safe file name by removing any unwanted characters
-        $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number); // Ensure you have a valid 'sales_invoice_number' property
-
-        // Stream the PDF to the browser
-        return $pdf->stream("Sales_Delivery_Order_{$nameFile}.pdf");
-    }
-
-    public function printSalesInvoicePDFNetto($sales_invoice_number)
-    {
-        // Retrieve the sales invoice with related data
-        $salesInvoice = SalesInvoice::with([
-            'company',
-            'department',
-            'customers',
-            'details' => function ($query) {
-                $query->orderBy('id', 'asc');
-            },
-            'details.items.itemDetails.unitConversion', // Nested relationships still load
-        ])->findOrFail($sales_invoice_number);
-        $totalDiscount= 0;
-        foreach ($salesInvoice->details as $key => $value) {
-            $subtotal = $value->qty*$value->base_qty*$value->price;
-            $totalDiscount+= ($subtotal *$value->disc_percent/100) +$value->disc_nominal;
-        }
-        // dd($salesInvoice);
-        $soNumber = explode(",",$salesInvoice->details[0]->sales_order_number)[0];
-        if( SalesOrder::where('sales_order_number',$soNumber)->first()){
-            $customerOrigin = SalesOrder::where('sales_order_number',$soNumber)->first()->customers;
-        }else{
-            $customerOrigin = Customer::where('customer_code',$salesInvoice->customers->group_customer)->first();
-            if(!$customerOrigin){
-                $customerOrigin = $salesInvoice->customers;
-            }
-        }
-
-        // Group the invoice details by item_id (if needed)
-        $groupedDetails = $salesInvoice->details->groupBy('item_id');
-        $tax = TaxMaster::where('tax_code','PPN')->first();
-
-        $totalHuruf = ucfirst($this->numberToWords($salesInvoice->total)).' rupiah';
-
-        // Generate and return the PDF
-        //return view('transaction.sales-invoice.sales_invoice_netto_print_webservice', compact('salesInvoice'));
-        return view('transaction.sales-invoice.sales_invoice_netto_pdf', compact('salesInvoice', 'groupedDetails','tax','totalHuruf','customerOrigin','totalDiscount'));
-
-        // Create a safe file name by removing any unwanted characters
-        $nameFile = Str::replace("/", "", $salesInvoice->sales_invoice_number); // Ensure you have a valid 'sales_invoice_number' property
-
-        // Stream the PDF to the browser
-        return $pdf->stream("Sales_Invoice_{$nameFile}.pdf");
-    }
-    function numberToWords($number) {
-        $number = floor($number);
-        $words = [
-            '', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'
-        ];
-
-        if ($number < 12) {
-            return $words[$number];
-        } else if ($number < 20) {
-            return $words[$number - 10] . ' belas';
-        } else if ($number < 100) {
-            $result = $words[floor($number / 10)] . ' puluh ' . $words[$number % 10];
-        } else if ($number < 200) {
-            $result = 'seratus ' . $this->numberToWords($number - 100);
-        } else if ($number < 1000) {
-            $result = $words[floor($number / 100)] . ' ratus ' . $this->numberToWords($number % 100);
-        } else if ($number < 2000) {
-            $result = 'seribu ' . $this->numberToWords($number - 1000);
-        } else if ($number < 1000000) {
-            $result = $this->numberToWords(floor($number / 1000)) . ' ribu ' . $this->numberToWords($number % 1000);
-        } else if ($number < 1000000000) {
-            $result = $this->numberToWords(floor($number / 1000000)) . ' juta ' . $this->numberToWords($number % 1000000);
-        } else if ($number < 1000000000000) {
-            $result = $this->numberToWords(floor($number / 1000000000)) . ' milyar ' . $this->numberToWords($number % 1000000000);
-        } else if ($number < 1000000000000000) {
-            $result = $this->numberToWords(floor($number / 1000000000000)) . ' triliun ' . $this->numberToWords($number % 1000000000000);
-        } else {
-            return 'Jumlah terlalu besar';
-        }
-
-        // Remove double spaces and trim
-        return trim(preg_replace('/\s+/', ' ', $result));
-    }
-
-
-
-
-    public function edit($id) {
-        try {
-            $companies = Company::all();
-            $departments = Department::where('department_code', 'DP01')->first();
-            $coas = Coa::all();
-            $items = ItemSalesPrice::where('department_code','DP01')->whereHas('items')->orderBy('item_code')->distinct('item_code')->with('items', 'unitn','itemDetails','items.warehouses')->get();
-            $itemUnits = ItemUnit::all();
-            $itemDetails = ItemDetail::where('department_code','DP01')->where('status',true)->get();
-            $customers = Supplier::all();
-            $customers = Customer::whereNot(function ($query) {
-            $query->where('customer_code', 'like', 'DP02%')
-                ->orWhere('customer_code', 'like', 'DP03%');
-            })->get();
-            $taxs = TaxMaster::where('tax_code','!=','PPN')->get();
-            $warehouses = Warehouse::all();
-
-            $salesInvoice = SalesInvoice::with('details')->findOrFail($id);
-
-            // dd($SalesInvoice);
-            $department_TDS = 'DP01';
-            $department_TDSn = Department::where('department_code', $department_TDS)->first();
-            $salesInvoiceDetails = SalesInvoiceDetail::where('sales_invoice_number', $salesInvoice->sales_invoice_number)->with(['items','units'])->orderBy('id','asc')->get();
-
-
-            // Format dates for display
-            $salesInvoice->document_date = Carbon::parse($salesInvoice->document_date)->format('Y-m-d');
-
-            $salesInvoice->due_date = Carbon::parse($salesInvoice->due_date)->format('Y-m-d');
-
-            $editable = true;
-            $payable = ReceivablePaymentDetail::where('document_number',$salesInvoice->sales_invoice_number)->get();
-            // $returns = SalesReturn::where('sales_invoice_number',$salesInvoice->sales_invoice_number)->get();
-            $note = SalesDebtCreditNote::where('invoice_number',$salesInvoice->sales_invoice_number)->get();
-            $editable = (count($payable) > 0 || count($note) > 0) ? false : true;
-            $privileges = Auth::user()->roles->privileges['sales_invoice'];
-
-            return view('transaction.sales-invoice.sales_invoice_edit', compact('salesInvoice', 'salesInvoiceDetails', 'companies', 'departments', 'coas', 'items', 'itemUnits', 'itemDetails', 'customers', 'customers', 'taxs', 'department_TDS', 'department_TDSn', 'editable','warehouses','privileges'));
-        } catch (\Exception $e) {
-            dd($e);
-            return redirect()->back()->with('error', 'Failed to load edit form: ' . $e->getMessage());
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        // dd($request->all());
-        DB::beginTransaction(); // Start the transaction
-        try {
-            // Retrieve the SalesInvoice record by sales_invoice_number
-
-            $general = SalesInvoice::where('id', $id)->firstOrFail();
-            $sales_invoice_number = $general->sales_invoice_number;
-            $general->contract_number = $request->contract_number;
-            $general->tax_revenue_tariff = $request->tax_revenue;
-            $general->document_date = $request->document_date;
-            $general->due_date = $request->due_date;
-            $general->reason = $request->edit_reason??'';
-            $general->tax = 'PPN';
-
-            $general->disc_nominal = str_replace(',', '', $request->disc_nominal??0);
-            // $general->con_invoice = $request->con_invoice;
-            // $general->status = 'Open';
-
-            $general->notes = $request->notes;
-            $general->created_by = Auth::user()->username;
-            $general->updated_by = Auth::user()->username;
-
-            // Save the main cash in entry
-            $tax_revenue_tariff=0;
-            if($request->tax_revenue!=0){
-                $tax_revenue_tariffs = TaxMaster::where('tax_code',$request->tax_revenue)->first();
-                $tax_revenue_tariff = $tax_revenue_tariffs->tariff;
-            }
-
-            $oldDetail  = SalesInvoiceDetail::where('sales_invoice_number', $sales_invoice_number)->get();
-            InventoryDetail::where('document_number', $general->sales_invoice_number)->delete();
-            Receivable::where('document_number', $sales_invoice_number)->delete();
-            Journal::where('document_number', $general->sales_invoice_number)->delete();
-            SalesInvoiceDetail::where('sales_invoice_number', $general->sales_invoice_number)->delete();
-
-            // Save the details
-            $this->saveSalesInvoiceDetails($request->details, $sales_invoice_number, $request->company_code, $request->department_code,$request->customer_code,$general, $tax_revenue_tariff,'update');
-            // Parse and assign date fields
-            DB::commit(); // Commit the transaction
-            return redirect()->route('transaction.sales_invoice')->with('success', 'Sales Invoice updated successfully!');
-
-        } catch (\Exception $e) {
-            DB::rollBack(); // Rollback transaction on error
-            // dd($e);
-            Log::error($e);
-            return redirect()->back()->with('error', 'Failed to update Sales Invoice: ' . $e->getMessage());
-        }
-    }
-
-
-
-    public function destroy(Request $request, $id) {
-        DB::beginTransaction();
-        try {
-            $general = SalesInvoice::findOrFail($id);
-            SalesInvoice::where('sales_invoice_number', $general->sales_invoice_number)->delete();
-            SalesInvoiceDetail::where('sales_invoice_number', $general->sales_invoice_number)->delete();
-            $general->delete();
-            InventoryDetail::where('document_number', $general->sales_invoice_number)->delete();
-
-            Journal::where('document_number',$general->sales_invoice_number)->delete();
-            Receivable::where('document_number',$general->sales_invoice_number)->delete();
-
-
-            $reason = $request->input('reason');
-
-            DeleteLog::create([
-                'document_number' => $general->sales_invoice_number,
-                'document_date' => $general->document_date,
-                'delete_notes' => $reason,
-                'type' => 'SI',
-                'company_code' => $general->company_code,
-                'department_code' => $general->department_code,
-                'deleted_by' => Auth::user()->username,
-            ]);
-
-            DB::commit(); // Commit transaction
-            return redirect()->route('transaction.sales_invoice')->with('success', 'Sales Invoice deleted successfully!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            dd($e);
-            Log::error($e);
-            return redirect()->route('transaction.sales_invoice')->with('error', 'Error deleting: ' . $e->getMessage());
-        }
-    }
-
 
     private function generateSalesInvoiceNumber($date) {
         $today = Carbon::parse($date);
@@ -512,117 +430,6 @@ class SalesInvoiceController extends Controller
         }
 
         return "$prefix/$newNumber";
-    }
-
-    public function create() {
-        $companies = Company::all();
-        $customers = Customer::whereNot(function ($query) {
-            $query->where('customer_code', 'like', 'DP02%')
-                ->orWhere('customer_code', 'like', 'DP03%');
-        })->get();
-        $items = ItemSalesPrice::where('department_code','DP01')->whereHas('items')->orderBy('item_code')->distinct('item_code')->with('items', 'unitn','itemDetails','items.warehouses')->get();
-        $itemDetails = ItemDetail::where('department_code','DP01')->where('status',true)->get();
-        $itemUnits = ItemUnit::all();
-        $taxs = TaxMaster::where('tax_code','!=','PPN')->get();
-        $department_TDS = 'DP01';
-        $department_TDSn = Department::where('department_code', $department_TDS)->first();
-
-
-        $salesOrder = SalesOrder::where('status','!=','Cancelled')->with([
-            'department',
-            'details' => function ($query) {
-                $query->where('qty_left', '>', 0)
-                    ->with(['items','items.warehouses', 'units']);
-            }
-        ])
-        ->orderBy('id', 'asc')
-        ->where('status', '!=', 'Closed')
-        ->where('department_code', 'DP01')
-        ->get();
-        $privileges = Auth::user()->roles->privileges['sales_invoice'];
-        // $salesOrderD = SalesOrderDetail::where('qty_left','>',0)->orderBy('id', 'asc')->with(['items','units','items.warehouses'])->get();
-        // $itemMb1 = DB::connection('mb1')->table('items')->where('qty','>',0)->select('item_code')->get();
-
-        // $itemMb1 = DB::connection('mb1')
-        //     ->table('items')
-        //     ->where('qty', '>', 0)
-        //     ->pluck('item_code');
-
-        // $salesOrderD = SalesOrderDetail::where('qty_left', '>', 0)
-        //     // ->whereIn('item_id', $itemMb1)
-        //     ->orderBy('id', 'asc')
-        //     ->with(['items', 'units', 'items.warehouses'])
-        //     ->get();
-
-
-        $token = str()->random(16);
-        return view('transaction.sales-invoice.sales_invoice_input', compact('companies', 'items', 'customers', 'customers', 'taxs','department_TDS', 'department_TDSn','salesOrder','privileges','items','itemDetails','itemUnits','token'));
-    }
-
-
-
-    public function store(Request $request) {
-        // dd($request->all());
-
-        $exist = SalesInvoice::where('token',$request->token)->where('department_code','DP01')->whereDate('created_at',Carbon::today())->first();
-        if($exist){
-            $id = SalesInvoice::where('created_by',Auth::user()->username)->orderBy('id','desc')->select('id')->first()->id;
-            return redirect()->route('transaction.sales_invoice.create')->with('success', 'Sales Invoice created successfully.')->with('id',$id);
-        }
-
-        DB::beginTransaction(); // Begin transaction to ensure atomicity
-        try {
-            $sales_invoice_number = $this->generateSalesInvoiceNumber($request->document_date);
-
-            if(SalesInvoice::where('sales_invoice_number', $request->sales_invoice_number)->count() < 1) {
-
-            $general = new SalesInvoice();
-            $general->sales_invoice_number = $sales_invoice_number;
-            $general->contract_number = $request->contract_number;
-            $general->document_date = $request->document_date;
-            $general->due_date = $request->due_date;
-            $general->customer_code = $request->customer_code;
-            $general->token = $request->token;
-            $general->tax = 'PPN';
-            $general->status = 'Open';
-            $general->disc_nominal = str_replace(',', '', $request->disc_nominal??0);
-            // $general->con_invoice = $request->con_invoice;
-            // $general->status = 'Open';
-
-
-            $general->notes = $request->notes;
-            $general->company_code = $request->company_code;
-            $general->department_code = $request->department_code;
-            $general->created_by = Auth::user()->username;
-            $general->updated_by = Auth::user()->username;
-
-            // Save the main cash in entry
-            $tax_revenue_tariff=0;
-            if($request->tax_revenue!=0){
-                $tax_revenue_tariffs = TaxMaster::where('tax_code',$request->tax_revenue)->first();
-                $tax_revenue_tariff = $tax_revenue_tariffs->tariff;
-            }
-            $general->tax_revenue_tariff = $request->tax_revenue;
-
-            // Save the details
-            $this->saveSalesInvoiceDetails($request->details, $sales_invoice_number, $request->company_code, $request->department_code,$request->customer_code,$general, $tax_revenue_tariff,'store');
-
-            $id = SalesInvoice::where('sales_invoice_number',$sales_invoice_number)->select('id')->first()?SalesInvoice::where('sales_invoice_number',$sales_invoice_number)->select('id')->first()->id:84;
-
-            DB::commit(); // Commit transaction
-            return redirect()->route('transaction.sales_invoice.create')->with('success', 'Sales Invoice created successfully.')->with('id',$id);
-
-            } else {
-                return redirect()->back()->with('error', 'Sales Invoice Number must not be the same');
-            };
-
-
-        } catch (\Exception $e) {
-            DB::rollBack(); // Rollback transaction on error
-            // dd($e);
-            Log::error($e->getMessage());
-            return redirect()->back()->with('error', 'Failed to create Sales Invoice: ' . $e->getMessage());
-        }
     }
 
     private function saveSalesInvoiceDetails(array $SalesInvoiceDetails, $sales_invoice_number, $company_code, $department_code,$customer_code,$general, $tax_revenue_tariff,$type) {
@@ -1189,7 +996,4 @@ class SalesInvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to create Purchase Invoice: ' . $e->getMessage())->withInput();
         }
     }
-
-
-
 }

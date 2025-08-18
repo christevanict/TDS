@@ -63,6 +63,12 @@
     <hr>
     <div class="container content">
         <h2>Edit {{__('Receivable Payment')}}</h2>
+        @if (!$editable)
+        <h7 style="color: red">Alasan tidak bisa edit</h7>
+            <ul>
+                <li>Sudah di Closing</li>
+            </ul>
+        @endif
         <form id="print-form" target="_blank" action="{{ route('transaction.receivable_payment.print', $receivable->id) }}" method="GET" style="display:inline;">
             <button type="submit" class="btn btn-dark mb-3" @if(!in_array('print', $privileges)) disabled @endif>
                 Print {{__('Receivable Payment')}}</button>
@@ -104,7 +110,7 @@
                             <input type="hidden" name="department_code" id="department_code" class="form-control" readonly value="{{ $departments->department_code }}" required>
                             <div class="form-group">
                                 <label for="document_date">Tanggal {{__('Receivable Payment')}}</label>
-                                <input type="date" name="document_date" class="form-control date-picker" readonly value="{{ $receivable->receivable_payment_date }}">
+                                <input type="date" id="document_date" name="document_date" class="form-control date-picker" readonly value="{{ $receivable->receivable_payment_date }}">
                             </div>
                             <br>
                             <div class="form-group">
@@ -251,11 +257,18 @@
             </div>
 
             <div class="save-button-container">
-                @if(in_array('update', $privileges))
+                @if(in_array('update', $privileges)&&$editable)
                 <button type="submit" class="btn btn-success mb-3">Update {{__('Receivable Payment')}}</button>
                 @endif
                 <a class="mb-3 btn btn-secondary" href="{{ route('transaction.receivable_payment') }}">Back</a>
             </div>
+        </form>
+        <form id="delete-form" action="{{ route('transaction.receivable_payment.destroy', $receivable->id) }}" method="POST" style="display:inline;">
+            @csrf
+            @method('POST')
+            <button type="button" class="btn btn-sm btn-danger mb-3" onclick="confirmDelete(event,'{{ $receivable->id }}')"
+                @if(!in_array('delete', $privileges) ||!$editable) disabled @endif
+            ><i class="material-icons-outlined">delete</i></button>
         </form>
     </div>
 </div>
@@ -285,6 +298,24 @@
 
 @section('scripts')
 <script>
+    function confirmDelete(event, id) {
+        event.preventDefault();
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to delete this {{__('Receivable Payment')}}?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            confirmButtonColor: '#0c6efd',
+            cancelButtonColor: '#d33',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form').submit();
+            }
+        });
+    }
+
     const coas = @json($coas);
     let rowCount = {{ isset($receivable_details) ? count($receivable_details) : 1 }};
     function setupSearch(inputId, resultsContainerId, inputHid) {
@@ -559,6 +590,7 @@
     });
 
     document.getElementById('receivable-payment-form').addEventListener('submit', function(event) {
+        event.preventDefault();
         let isValid = true;
         const detailsJson = $(this).find(`input[id="payment_details"]`).val();
         const existingDetails = detailsJson ? JSON.parse(detailsJson) : [];
@@ -626,6 +658,38 @@
         });
         if (!isValid) {
             event.preventDefault();
+        }else{
+            // Perform date validation via AJAX
+            const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+            $.ajax({
+                url: '{{ route("checkDateToPeriode") }}',
+                type: 'POST',
+                data: {
+                    date: documentDate,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response != true) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Date',
+                            text: 'Tidak bisa input tanggal pada periode !',
+                        });
+                        return; // Stop further execution
+                    }
+
+                    // All validations passed, submit form
+                    document.getElementById('receivable-payment-form').submit();
+                },
+                error: function(xhr) {
+                    console.log(xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to validate date. Please try again.',
+                    });
+                }
+            });
         }
     });
 </script>

@@ -247,7 +247,7 @@ class ItemController extends Controller
     {
         $item = Item::where('id', $id)->firstOrFail();
         $boleh = true;
-        $exist1 = SalesOrderDetail::where('item_id',$item->item_code)->exists();
+        $exist1 = SalesInvoiceDetail::where('item_id',$item->item_code)->exists();
         $exist2 = GoodReceiptDetail::where('item_id',$item->item_code)->exists();
         $exist3 = PurchaseReturnDetail::where('item_id',$item->item_code)->exists();
         $exist4 = SalesReturnDetail::where('item_id',$item->item_code)->exists();

@@ -346,10 +346,10 @@ class JournalController extends Controller
         // Adjustment Query (from BeginningBalance)
         $adjustmentQuery = BeginningBalance::select(
             'account_number as account_code',
-            DB::raw("SUM(CASE WHEN account_number = '3000.03' THEN adjust_debit_nominal ELSE adjust_credit_nominal END) AS adjustment_debit"),
-            DB::raw("SUM(CASE WHEN account_number = '3000.03' THEN adjust_credit_nominal ELSE adjust_debit_nominal END) AS adjustment_credit")
+            DB::raw("SUM(CASE WHEN account_number = '3200300' THEN adjust_debit_nominal ELSE adjust_credit_nominal END) AS adjustment_debit"),
+            DB::raw("SUM(CASE WHEN account_number = '3200300' THEN adjust_credit_nominal ELSE adjust_debit_nominal END) AS adjustment_credit")
         )
-            ->where('account_number', '>=', '3000')
+            ->where('account_number', '>=', '3000000')
             ->where('periode', $selectedDate->format('Ym'))
             ->where(function ($query) {
                 $query->where('adjust_debit_nominal', '>', 0)

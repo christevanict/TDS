@@ -31,9 +31,12 @@ class PeriodeController extends Controller
         // Define the date range for the query
         $startDate = $request->start_date;
         $endDate = $request->end_date;
+
+
         if(Carbon::now()<$endDate){
             return redirect()->back()->with('error','Cannot close this periode');
         }
+        $endDate = \Carbon\Carbon::parse($endDate)->endOfDay();
         $periodeCode = substr($endDate,0,4). substr($endDate,5,2);
         $nextPeriode = $this->getNextPeriodDetails($periodeCode);
         $company = Company::first();
@@ -48,11 +51,11 @@ class PeriodeController extends Controller
             ->map(function ($coa) use ($startDate, $endDate) {
                 // Calculate trial balance values
                 $debitBeforeAdjustment = $coa->journals()
-                    ->where('created_at', '<', $startDate)
+                    ->where('document_date', '<', $startDate)
                     ->sum('debet_nominal');
 
                 $creditBeforeAdjustment = $coa->journals()
-                    ->where('created_at', '<', $startDate)
+                    ->where('document_date', '<', $startDate)
                     ->sum('credit_nominal');
 
                 // Calculate Trial Balance before Adjustment (Debit)
@@ -73,15 +76,19 @@ class PeriodeController extends Controller
 
                 // Calculate adjustments
                 $debitAdjustment = $coa->journals()
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereBetween('document_date', [$startDate, $endDate])
+                    ->where('department_code','DP01')
                     ->sum('debet_nominal') - $coa->journals()
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereBetween('document_date', [$startDate, $endDate])
+                    ->where('department_code','DP01')
                     ->sum('credit_nominal');
 
                 $creditAdjustment = $coa->journals()
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereBetween('document_date', [$startDate, $endDate])
+                    ->where('department_code','DP01')
                     ->sum('credit_nominal') - $coa->journals()
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereBetween('document_date', [$startDate, $endDate])
+                    ->where('department_code','DP01')
                     ->sum('debet_nominal');
 
                 // Replace negative values with 0 for adjustments
@@ -100,6 +107,8 @@ class PeriodeController extends Controller
                 ];
             });
             // dd($trialBalance);
+            $totalDebet = 0;
+            $totalCredit = 0;
             foreach ($trialBalance as $key => $value) {
                 // dd($value);
                 BeginningBalance::create([
@@ -114,13 +123,14 @@ class PeriodeController extends Controller
                     'created_by'=>Auth::user()->username,
                     'updated_by'=>Auth::user()->username,
                 ]);
-
                 //Jurnal pembalik hanya untuk Sales, COGS, Expenses, Other Expenses, Other Revenue.
-                if($value['account_type']=='Sales'||$value['account_type']=='COGS'||$value['account_type']=='Expenses'||$value['account_type']=='Other Revenue'||$value['account_type']=='Other Expenses'){
+                if($value['account_type']=='Sales'||$value['account_type']=='COGS'||$value['account_type']=='Expense'||$value['account_type']=='Other Revenue'||$value['account_type']=='Other Expense'){
+                    $totalDebet +=$value['adjust_debit_nominal'];
+                    $totalCredit +=$value['adjust_credit_nominal'];
                     Journal::create([
                         'document_number'=>'JP/'.$periodeCode,
                         'account_number'=>$value['account_number'],
-                        'document_date'=>date('Y-m-d'),
+                        'document_date'=>$endDate,
                         'notes'=>'Reversing to journals for the period of '.$this->convertPeriodCodeToMonthYear($periodeCode),
                         'debet_nominal'=>$value['adjust_credit_nominal'],
                         'credit_nominal'=>$value['adjust_debit_nominal'],
@@ -131,6 +141,35 @@ class PeriodeController extends Controller
                     ]);
                 }
             }
+            $nominalLaba = $totalCredit - $totalDebet;
+            $nominalDebet =0;
+            $nominalCredit =0;
+            if($nominalLaba>0){
+                $nominalCredit = $nominalLaba;
+            }else{
+                $nominalDebet = $nominalLaba*-1;
+            }
+            Journal::create([
+                'document_number'=>'JP/'.$periodeCode,
+                'account_number'=>'3200300',
+                'document_date'=>$endDate,
+                'notes'=>'Reversing to journals for the period of '.$this->convertPeriodCodeToMonthYear($periodeCode),
+                'debet_nominal'=>$nominalDebet,
+                'credit_nominal'=>$nominalCredit,
+                'company_code'=>$company->company_code,
+                'department_code'=>$department->department_code,
+                'created_by'=>Auth::user()->username,
+                'updated_by'=>Auth::user()->username,
+            ]);
+
+            $beginningBalanceLaba = BeginningBalance::where('periode',$periodeCode)->where('account_number','3200300')->first();
+            $beginningBalanceLaba->adjust_debit_nominal = $beginningBalanceLaba->adjust_debit_nominal+$nominalDebet;
+            $beginningBalanceLaba->adjust_credit_nominal = $beginningBalanceLaba->adjust_credit_nominal+$nominalCredit;
+            $beginningBalanceLaba->ending_debet_balance = $beginningBalanceLaba->ending_debet_balance+$nominalDebet;
+            $beginningBalanceLaba->ending_credit_balance = $beginningBalanceLaba->ending_credit_balance+$nominalCredit;
+            $beginningBalanceLaba->save();
+
+
             Periode::where('periode_code',$periodeCode)->update([
                 'periode_active'=>'closed',
                 'closed_at'=>Carbon::now(),
@@ -146,11 +185,12 @@ class PeriodeController extends Controller
                     'periode_active'=>'active',
                 ]);
             }
+            Journal::where('document_number','JP/'.$periodeCode)->where('debet_nominal',0)->where('credit_nominal',0)->delete();
             DB::commit();
             return redirect()->back()->with('success','Successfully Closing Periode');
         }catch (\Throwable $e) {
             DB::rollBack();  // Roll back the transaction on error
-            // dd($e);
+            dd($e);
             Log::error($e->getMessage());
             return redirect()->back()->with('error', 'Failed to save');
         }
@@ -161,8 +201,8 @@ class PeriodeController extends Controller
     {
         DB::beginTransaction();  // Begin the transaction
         try {
-            $oldActivePeriode = Periode::where('periode_active','active')->orderBy('id','asc')->first();
-            $previousePreiodeCode = $this->getPreviousPeriodCode($oldActivePeriode->periode_code);
+            $oldActivePeriode = Periode::where('periode_active','closed')->orderBy('id','desc')->first();
+            $previousePreiodeCode = $oldActivePeriode->periode_code;
             Periode::where('periode_code',$previousePreiodeCode)->update(['periode_active'=>'active']);
             Journal::where('document_number','JP/'.$previousePreiodeCode)->delete();
             BeginningBalance::where('periode',$previousePreiodeCode)->delete();

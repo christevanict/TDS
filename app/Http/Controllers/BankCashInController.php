@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Journal;
 use App\Models\Coa;
 use App\Models\Department;
+use App\Models\Periode;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -143,10 +144,20 @@ class BankCashInController extends Controller
             // Fetch BankCashIn with its related details
             $bankCashIn = BankCashIn::with('details')->findOrFail($id);
 
+
+
             // Pastikan bank_cash_in_date diubah menjadi objek Carbon
             $bankCashIn->bank_cash_in_date = Carbon::parse($bankCashIn->bank_cash_in_date)->format('Y-m-d');
+            $editable= true;
+            $periodeClosed = Periode::where('periode_active', 'closed')
+            ->where('periode_start', '<=', $bankCashIn->bank_cash_in_date)
+            ->where('periode_end', '>=', $bankCashIn->bank_cash_in_date)
+            ->first();
+            if($periodeClosed){
+                $editable = false;
+            }
             $privileges = Auth::user()->roles->privileges['bank_in'];
-            return view('transaction.bank-cash-in.bank_cash_in_edit', compact('bankCashIn', 'companies', 'departments', 'coas','privileges'));
+            return view('transaction.bank-cash-in.bank_cash_in_edit', compact('bankCashIn', 'companies', 'departments', 'coas','privileges','editable'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to load edit form: ' . $e->getMessage());
         }
@@ -387,6 +398,7 @@ class BankCashInController extends Controller
     }
 
     function numberToWords($number) {
+        $number = floor($number);
         $words = [
             '', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'
         ];

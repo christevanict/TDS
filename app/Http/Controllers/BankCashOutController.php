@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Journal;
 use App\Models\Coa;
 use App\Models\Department;
+use App\Models\Periode;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -134,8 +135,16 @@ class BankCashOutController extends Controller
             $bankCashOut = BankCashOut::with('details')->findOrFail($id);
 
             $bankCashOut->bank_cash_out_date = Carbon::parse($bankCashOut->bank_cash_out_date)->format('Y-m-d');
+            $editable= true;
+            $periodeClosed = Periode::where('periode_active', 'closed')
+            ->where('periode_start', '<=', $bankCashOut->bank_cash_out_date)
+            ->where('periode_end', '>=', $bankCashOut->bank_cash_out_date)
+            ->first();
+            if($periodeClosed){
+                $editable = false;
+            }
             $privileges = Auth::user()->roles->privileges['bank_out'];
-            return view('transaction.bank-cash-out.bank_cash_out_edit', compact('bankCashOut', 'companies', 'departments', 'coas','privileges'));
+            return view('transaction.bank-cash-out.bank_cash_out_edit', compact('bankCashOut', 'companies', 'departments', 'coas','privileges','editable'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to load edit form: ' . $e->getMessage());
         }
@@ -361,6 +370,7 @@ class BankCashOutController extends Controller
     }
 
     function numberToWords($number) {
+        $number = floor($number);
         $words = [
             '', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'
         ];

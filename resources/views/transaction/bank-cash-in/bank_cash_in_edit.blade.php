@@ -8,6 +8,12 @@
     <hr>
     <div class="container content">
         <h2>Edit {{__('Bank Cash In')}} Input</h2>
+        @if (!$editable)
+        <h7 style="color: red">Alasan tidak bisa edit</h7>
+            <ul>
+                <li>Sudah di Closing</li>
+            </ul>
+        @endif
 
         <div id="message-container">
             @if(session('success'))
@@ -139,7 +145,7 @@
             </div>
 
             <div class="form-group submit-btn mb-3">
-                <button type="submit" class="btn btn-primary" @if(!in_array('update', $privileges)) disabled @endif>Edit Kas Masuk</button>
+                <button type="submit" class="btn btn-primary" @if(!in_array('update', $privileges)||!$editable) disabled @endif>Edit Kas Masuk</button>
             </div>
         </form>
 
@@ -147,7 +153,7 @@
             @csrf
             @method('POST')
             <button type="button" class="btn btn-sm btn-danger mb-3" onclick="confirmDelete(event,'{{ $bankCashIn->id }}')"
-                @if(!in_array('delete', $privileges)) disabled @endif
+                @if(!in_array('delete', $privileges)||!$editable) disabled @endif
             ><i class="material-icons-outlined">delete</i></button>
         </form>
 
@@ -354,6 +360,40 @@ const coas = @json($coas);
         }
     });
     }
+
+    document.getElementById('bank-cash-in-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+        $.ajax({
+            url: '{{ route("checkDateToPeriode") }}',
+            type: 'POST',
+            data: {
+                date: documentDate,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response != true) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Date',
+                        text: 'Tidak bisa input tanggal pada periode !',
+                    });
+                    return; // Stop further execution
+                }
+
+                // All validations passed, submit form
+                document.getElementById('bank-cash-in-form').submit();
+            },
+            error: function(xhr) {
+                console.log(xhr);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to validate date. Please try again.',
+                });
+            }
+        });
+    });
 
 </script>
 @endsection

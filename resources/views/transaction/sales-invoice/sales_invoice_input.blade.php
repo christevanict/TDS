@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         var id = "{{ session('id') }}"; // Get the id from the session
                         if (id) {
                             // Navigate to the edit route with the id
-                            window.open("{{ route('sales_invoice.print.all', ['id' => ':id']) }}".replace(':id', id), '_blank');
+                            window.open("{{ route('sales_invoice.print', ['id' => ':id']) }}".replace(':id', id), '_blank');
                         }
                     }
                 });
@@ -1208,27 +1208,61 @@ function calculateTotals() {
 
     document.getElementById('add-row').addEventListener('click', addNewRow);
 
-    $("#si-form").on("submit",function(e) {
+    $("#si-form").on("submit", function(e) {
+        e.preventDefault(); // Prevent default submission until all checks pass
 
-        var rowCount = $("#parentTbody tr").length;
-        if (rowCount === 0) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'warning',
-                title: 'Oops...',
-                text: 'Ada barang yang belum dipilih!',
-            });
-            return;
-        }
+        const documentDate = document.getElementById('document_date').value;
 
-        let formData = new FormData(this);
-        let aa = true;
-        if($("#checkHPP").val() == 1 ||$("#checkHPP").val() == "1"){
-            aa = false;
-        }
-        if(aa){
-            $("#si-form").submit();
-        }
+        // Check document_date with AJAX
+        $.ajax({
+            url: '{{ route("checkDateToPeriode") }}',
+            type: 'POST',
+            data: {
+                date: documentDate,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response!=true) { // Check response.success (from your controller)
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Date',
+                        text: 'Tidak bisa input tanggal pada periode non aktif!',
+                    });
+                    return; // Stop further execution
+                }
+
+                // Proceed with other validations only if date is valid
+                let isValid = true;
+
+                // Check row count
+                var rowCount = $("#parentTbody tr").length;
+                if (rowCount === 0) {
+                    isValid = false;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Oops...',
+                        text: 'Ada barang yang belum dipilih!',
+                    });
+                    return; // Stop further execution
+                }
+
+                // Check stock if checkHPP is not 1
+                let formData = new FormData(document.getElementById('si-form'));
+                let aa = $("#checkHPP").val() != 1;
+
+                if(isValid){
+                    $("#si-form")[0].submit();
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to validate date. Please try again.',
+                });
+                console.log(xhr);
+            }
+        });
     });
 </script>
 @endsection

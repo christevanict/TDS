@@ -13,6 +13,7 @@ use App\Models\PaymentMethod;
 use App\Models\Customer;
 use App\Models\Coa;
 use App\Models\Journal;
+use App\Models\Periode;
 use App\Models\Receivable;
 use App\Models\ReceivableHistory;
 use Carbon\Carbon;
@@ -294,7 +295,16 @@ class ReceivablePaymentController extends Controller
         })->get();
         $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['receivable_payment'];
-        return view('transaction.receivable-payment.edit', compact('receivable', 'receivable_details', 'receivable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','salesInvoices'));
+        $editable= true;
+        $periodeClosed = Periode::where('periode_active', 'closed')
+        ->where('periode_start', '<=', $receivable->receivable_payment_date)
+        ->where('periode_end', '>=', $receivable->receivable_payment_date)
+        ->first();
+        if($periodeClosed){
+            $editable = false;
+        }
+
+        return view('transaction.receivable-payment.edit', compact('receivable', 'receivable_details', 'receivable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','salesInvoices','editable'));
     }
 
     public function update(Request $request, $id)

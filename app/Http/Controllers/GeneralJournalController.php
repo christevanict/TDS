@@ -9,6 +9,7 @@ use App\Models\Department;
 use App\Models\Journal;
 use App\Models\GeneralJournal;
 use App\Models\GeneralJournalDetail;
+use App\Models\Periode;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -131,8 +132,16 @@ class GeneralJournalController extends Controller
             $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
             $generalJournal = GeneralJournal::with('details')->findOrFail($id);
             $generalJournal->general_journal_date = Carbon::parse($generalJournal->general_journal_date)->format('Y-m-d');
+            $editable= true;
+            $periodeClosed = Periode::where('periode_active', 'closed')
+            ->where('periode_start', '<=', $generalJournal->general_journal_date)
+            ->where('periode_end', '>=', $generalJournal->general_journal_date)
+            ->first();
+            if($periodeClosed){
+                $editable = false;
+            }
             $privileges = Auth::user()->roles->privileges['general_journal'];
-            return view('transaction.general-journal.general_journal_edit', compact('generalJournal', 'companies', 'departments', 'coas','privileges'));
+            return view('transaction.general-journal.general_journal_edit', compact('generalJournal', 'companies', 'departments', 'coas','privileges','editable'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to load edit form: ' . $e->getMessage());
         }
@@ -245,8 +254,9 @@ class GeneralJournalController extends Controller
     }
 
     function numberToWords($number) {
+        $number = floor($number);
         $words = [
-            '', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'
+            'nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'
         ];
 
         if ($number < 12) {

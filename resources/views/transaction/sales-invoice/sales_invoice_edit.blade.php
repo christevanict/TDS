@@ -22,8 +22,15 @@ min-width: 600px; /* Set a minimum width to ensure horizontal scrolling */
     <hr>
     <div class="container content">
         <h2>{{__('Sales Invoice')}} Edit</h2>
-        @if ($salesInvoice->reason)
-            <h5 style="color: red">Alasan edit: {{$salesInvoice->reason}}</h5>
+        @if (!$editable)
+        <h7 style="color: red">Alasan tidak bisa edit</h7>
+            <ul>
+                @foreach (explode('<br>', trim($note, '<br>')) as $item)
+                    @if (!empty($item))
+                        <li>{!! $item !!}</li>
+                    @endif
+                @endforeach
+            </ul>
         @endif
         <form id="print-form" target="_blank" action="{{ route('sales_invoice.print', $salesInvoice->id) }}" method="GET"
             style="display:inline;">
@@ -295,23 +302,6 @@ $('#document_date').prop('max', maxDate);
 let rowCount = {{ isset($salesInvoice) ? count($salesInvoice->details) : 1 }};
 let items = @json($items);
 
-function confirm(event, id) {
-    event.preventDefault(); // Prevent form submission
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#0c6efd',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, Approve!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            document.getElementById('approve-form').submit(); // Submit the form
-        }
-    });
-    }
-
     function confirmDelete(event, id) {
         event.preventDefault();
         Swal.fire({
@@ -354,10 +344,41 @@ function confirm(event, id) {
 
         }).then((result) => {
             if (result.isConfirmed) {
-                document.getElementById('contract-form').submit();
+                const documentDate = document.getElementById('document_date').value;
+                $.ajax({
+                    url: '{{ route("checkDateToPeriode") }}',
+                    type: 'POST',
+                    data: {
+                        date: documentDate,
+                        _token: '{{ csrf_token() }}' // CSRF token
+                    },
+                    success: function(response) {
+                        if (response!=true&&response!=1) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid Date',
+                                text: 'Tidak bisa input tanggal pada periode non aktif!',
+                            });
+                            return false;
+                        }else{
+                            document.getElementById('contract-form').submit();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.log(xhr);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to validate date. Please try again.',
+                        });
+                        return false;
+                    }
+                });
             }
         });
     }
+
 
     let activeIndex = -1;
     function setupItemSearch(rowId) {

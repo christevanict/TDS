@@ -33,6 +33,7 @@ Route::prefix('TDS')->group(function () {
     Route::post('/getStockByDate', [App\Http\Controllers\SystemController::class, 'getStockByDate'])->name("getStockByDate");
     Route::post('/checkUnit', [App\Http\Controllers\SystemController::class, 'checkUnit'])->name("checkUnit");
     Route::post('/getStockByDatePerItem', [App\Http\Controllers\SystemController::class, 'getStockByDatePerItem'])->name("getStockByDatePerItem");
+    Route::post('/checkDateToPeriode', [App\Http\Controllers\SystemController::class, 'checkDateToPeriode'])->name("checkDateToPeriode");
 
 
     //print
@@ -382,23 +383,6 @@ Route::prefix('TDS')->group(function () {
                     Route::get('/reimburse/{id}/print', [App\Http\Controllers\ReimburseController::class, 'printPDF'])->name('transaction.reimburse.print');
                 });
 
-                Route::prefix('purchase-invoice-recap')->group(function () {
-                    Route::get('/', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'index'])->name('transaction.purchase_invoice_recap');
-                    Route::get('/edit/{id}', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'edit'])->name('transaction.purchase_invoice_recap.edit'); //
-                    // Update existing cash in using POST
-                    Route::put('/update/{id}', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'update'])->name('transaction.purchase_invoice_recap.update');
-                    Route::put('/updateStatus/{id}', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'updateStatus'])->name('transaction.purchase_invoice_recap.approve');
-                    Route::post('/delete/{id}', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'destroy'])->name('transaction.purchase_invoice_recap.destroy');
-                    Route::post('/cancel/{id}', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'cancel'])->name('transaction.purchase_invoice_recap.cancel');
-                    Route::get('/purchase-invoice/{id}/print', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'printPDF'])->name('transaction.purchase_invoice_recap.print');
-                    Route::get('/purchase-invoice/{id}/print/netto', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'printPDFNetto'])->name('transaction.purchase_invoice_recap.print.netto');
-                    Route::get('/summary', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'summary'])->name('transaction.purchase_invoice_recap.summary');
-                    Route::get('/summary-detail', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'summaryDetail'])->name('transaction.purchase_invoice_recap.summary_detail');
-                    Route::get('/create', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'create'])->name('transaction.purchase_invoice_recap.create'); // Show the form to create a new cash in
-                    Route::post('/store', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'store'])->name('transaction.purchase_invoice_recap.store'); // Store a newly created cash in
-                    Route::post('/change-department', [App\Http\Controllers\PurchaseInvoiceRecapController::class, 'changeDepartment'])->name('transaction.purchase_invoice_recap.changeDepartment');
-                });
-
                 Route::middleware(['role:purchase_invoice'])->group(function () {
 
                 Route::prefix('purchase-invoice')->group(function () {
@@ -420,20 +404,6 @@ Route::prefix('TDS')->group(function () {
                 });
             });
 
-            Route::prefix('purchase-return-recap')->group(function () {
-                Route::get('/', [App\Http\Controllers\PurchaseReturnRecapController::class, 'index'])->name('transaction.purchase_return_recap');
-                Route::get('/edit/{id}', [App\Http\Controllers\PurchaseReturnRecapController::class, 'edit'])->name('transaction.purchase_return_recap.edit'); //
-                // Update existing cash in using POST
-                Route::put('/update/{id}', [App\Http\Controllers\PurchaseReturnRecapController::class, 'update'])->name('transaction.purchase_return_recap.update');
-                Route::put('/updateStatus/{id}', [App\Http\Controllers\PurchaseReturnRecapController::class, 'updateStatus'])->name('transaction.purchase_return_recap.approve');
-                Route::post('/delete/{id}', [App\Http\Controllers\PurchaseReturnRecapController::class, 'destroy'])->name('transaction.purchase_return_recap.destroy');
-                Route::get('/{id}/print', [App\Http\Controllers\PurchaseReturnRecapController::class, 'printPDF'])->name('transaction.purchase_return_recap.print');
-                Route::get('/summary', [App\Http\Controllers\PurchaseReturnRecapController::class, 'summary'])->name('transaction.purchase_return_recap.summary');
-                Route::get('/create', [App\Http\Controllers\PurchaseReturnRecapController::class, 'create'])->name('transaction.purchase_return_recap.create'); // Show the form to create a new cash in
-                Route::post('/store', [App\Http\Controllers\PurchaseReturnRecapController::class, 'store'])->name('transaction.purchase_return_recap.store'); // Store a newly created cash in
-                Route::post('/change-department', [App\Http\Controllers\PurchaseReturnRecapController::class, 'changeDepartment'])->name('transaction.purchase_return_recap.changeDepartment');
-            });
-
             Route::middleware(['role:purchase_return'])->group(function () {
                 Route::prefix('purchase-return')->group(function () {
                     Route::get('/', [App\Http\Controllers\PurchaseReturnController::class, 'index'])->name('transaction.purchase_return');
@@ -449,20 +419,6 @@ Route::prefix('TDS')->group(function () {
                     Route::get('/recalculate-journal', [App\Http\Controllers\PurchaseReturnController::class, 'recalcJournal']);
                     Route::get('/recalculate-inventory', [App\Http\Controllers\PurchaseReturnController::class, 'recalculateInventory']);
                 });
-            });
-
-            Route::prefix('sales-return-recap')->group(function () {
-                Route::get('/', [App\Http\Controllers\SalesReturnRecapController::class, 'index'])->name('transaction.sales_return_recap');
-                Route::get('/edit/{id}', [App\Http\Controllers\SalesReturnRecapController::class, 'edit'])->name('transaction.sales_return_recap.edit'); //
-                // Update existing cash in using POST
-                Route::put('/update/{id}', [App\Http\Controllers\SalesReturnRecapController::class, 'update'])->name('transaction.sales_return_recap.update');
-                Route::put('/updateStatus/{id}', [App\Http\Controllers\SalesReturnRecapController::class, 'updateStatus'])->name('transaction.sales_return_recap.approve');
-                Route::post('/delete/{id}', [App\Http\Controllers\SalesReturnRecapController::class, 'destroy'])->name('transaction.sales_return_recap.destroy');
-                Route::get('/{id}/print', [App\Http\Controllers\SalesReturnRecapController::class, 'printSalesReturnPDF'])->name('transaction.sales_return_recap.print');
-                Route::get('/summary', [App\Http\Controllers\SalesReturnRecapController::class, 'summary'])->name('transaction.sales_return_recap.summary');
-                Route::get('/create', [App\Http\Controllers\SalesReturnRecapController::class, 'create'])->name('transaction.sales_return_recap.create'); // Show the form to create a new cash in
-                Route::post('/store', [App\Http\Controllers\SalesReturnRecapController::class, 'store'])->name('transaction.sales_return_recap.store'); // Store a newly created cash in
-                Route::post('/change-department', [App\Http\Controllers\SalesReturnRecapController::class, 'changeDepartment'])->name('transaction.sales_return_recap.changeDepartment');
             });
 
             Route::middleware(['role:sales_return'])->group(function () {
@@ -502,81 +458,35 @@ Route::prefix('TDS')->group(function () {
                 });
             });
 
-            Route::prefix('sales-invoice-recap')->group(function () {
-                Route::get('/', [App\Http\Controllers\SalesInvoiceRecapController::class, 'index'])->name('transaction.sales_invoice_recap');
-                Route::get('/edit/{id}', [App\Http\Controllers\SalesInvoiceRecapController::class, 'edit'])->name('transaction.sales_invoice_recap.edit'); //
-                // Update existing cash in using POST
-                Route::put('/update/{id}', [App\Http\Controllers\SalesInvoiceRecapController::class, 'update'])->name('transaction.sales_invoice_recap.update');
-
-                Route::post('/delete/{id}', [App\Http\Controllers\SalesInvoiceRecapController::class, 'destroy'])->name('transaction.sales_invoice_recap.destroy');
-                Route::get('/sales-invoice/{id}/print', [App\Http\Controllers\SalesInvoiceRecapController::class, 'printSalesInvoicePDF'])
-                ->name('sales_invoice_recap.print');
-                Route::get('/sales-invoice/{id}/print-netto', [App\Http\Controllers\SalesInvoiceRecapController::class, 'printSalesInvoicePDFNetto_recap'])
-                ->name('sales_invoice_recap.print.netto');
-                Route::get('/sales-invoice/{id}/print-do', [App\Http\Controllers\SalesInvoiceRecapController::class, 'printSalesInvoicePDFDo_recap'])
-                ->name('sales_invoice_recap.print.do');
-                Route::get('/sales-invoice/{id}/print-all', [App\Http\Controllers\SalesInvoiceRecapController::class, 'printSalesInvoiceAll_recap'])
-                ->name('sales_invoice_recap.print.all');
-                Route::get('/summary', [App\Http\Controllers\SalesInvoiceRecapController::class, 'summary'])->name('transaction.sales_invoice_recap.summary');
-                Route::get('/summary-detail', [App\Http\Controllers\SalesInvoiceRecapController::class, 'summaryDetail'])->name('transaction.sales_invoice_recap.summary_detail');
-                Route::get('/create', [App\Http\Controllers\SalesInvoiceRecapController::class, 'create'])->name('transaction.sales_invoice_recap.create'); // Show the form to create a new cash in
-                Route::post('/store', [App\Http\Controllers\SalesInvoiceRecapController::class, 'store'])->name('transaction.sales_invoice_recap.store'); // Store a newly created cash in
-                Route::get('/delivery-confirmation', [App\Http\Controllers\SalesInvoiceRecapController::class, 'showDeliveryPage'])->name('transaction.sales_invoice_recap.delivery_confirmation');
-
-                Route::post('/update-status', [App\Http\Controllers\SalesInvoiceRecapController::class, 'updateStatus'])->name('transaction.sales_invoice_recap.update_status');
-                Route::get('/delivery-confirmation-cancel', [App\Http\Controllers\SalesInvoiceRecapController::class, 'showCancelDeliveryPage'])->name('transaction.sales_invoice_recap.delivery_confirmation_cancel');
-                Route::post('/update-status-cancel', [App\Http\Controllers\SalesInvoiceRecapController::class, 'updateStatusCancel'])->name('transaction.sales_invoice_recap.update_status_cancel');
-                Route::post('/change-department', [App\Http\Controllers\SalesInvoiceRecapController::class, 'changeDepartment'])->name('transaction.sales_invoice_recap.changeDepartment');
-            });
 
             Route::middleware(['role:sales_invoice'])->group(function () {
                 Route::prefix('sales-invoice')->group(function () {
                     Route::get('/', [App\Http\Controllers\SalesInvoiceController::class, 'index'])->name('transaction.sales_invoice');
+                     Route::get('/create', [App\Http\Controllers\SalesInvoiceController::class, 'create'])->name('transaction.sales_invoice.create'); // Show the form to create a new cash in
+                    Route::post('/store', [App\Http\Controllers\SalesInvoiceController::class, 'store'])->name('transaction.sales_invoice.store'); // Store a newly created cash in
                     Route::get('/edit/{id}', [App\Http\Controllers\SalesInvoiceController::class, 'edit'])->name('transaction.sales_invoice.edit'); //
                     // Update existing cash in using POST
                     Route::put('/update/{id}', [App\Http\Controllers\SalesInvoiceController::class, 'update'])->name('transaction.sales_invoice.update');
-
                     Route::post('/delete/{id}', [App\Http\Controllers\SalesInvoiceController::class, 'destroy'])->name('transaction.sales_invoice.destroy');
+
                     Route::get('/sales-invoice/{id}/print', [App\Http\Controllers\SalesInvoiceController::class, 'printSalesInvoicePDF'])
                     ->name('sales_invoice.print');
-                    Route::get('/sales-invoice/{id}/print-netto', [App\Http\Controllers\SalesInvoiceController::class, 'printSalesInvoicePDFNetto'])
-                    ->name('sales_invoice.print.netto');
-                    Route::get('/sales-invoice/{id}/print-do', [App\Http\Controllers\SalesInvoiceController::class, 'printSalesInvoicePDFDo'])
-                    ->name('sales_invoice.print.do');
-                    Route::get('/sales-invoice/{id}/print-all', [App\Http\Controllers\SalesInvoiceController::class, 'printSalesInvoiceAll'])
-                    ->name('sales_invoice.print.all');
+
                     Route::get('/summary', [App\Http\Controllers\SalesInvoiceController::class, 'summary'])->name('transaction.sales_invoice.summary');
                     Route::get('/summary-detail', [App\Http\Controllers\SalesInvoiceController::class, 'summaryDetail'])->name('transaction.sales_invoice.summary_detail');
-                    Route::get('/create', [App\Http\Controllers\SalesInvoiceController::class, 'create'])->name('transaction.sales_invoice.create'); // Show the form to create a new cash in
-                    Route::post('/store', [App\Http\Controllers\SalesInvoiceController::class, 'store'])->name('transaction.sales_invoice.store'); // Store a newly created cash in
-                    Route::get('/delivery-confirmation', [App\Http\Controllers\SalesInvoiceController::class, 'showDeliveryPage'])->name('transaction.sales_invoice.delivery_confirmation');
-                    Route::get('/delivery-report', [App\Http\Controllers\SalesInvoiceController::class, 'summaryDelivery'])->name('transaction.sales_invoice_recap.delivery_report');
-                    Route::post('/update-status', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatus'])->name('transaction.sales_invoice.update_status');
-                    Route::get('/delivery-confirmation-cancel', [App\Http\Controllers\SalesInvoiceController::class, 'showCancelDeliveryPage'])->name('transaction.sales_invoice.delivery_confirmation_cancel');
-                    Route::post('/update-status-cancel', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatusCancel'])->name('transaction.sales_invoice.update_status_cancel');
-                    Route::get('/recalculate-journal', [App\Http\Controllers\SalesInvoiceController::class, 'recalcJournal']);
-                    Route::get('/updateStatusDb', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatusDb']);
+
+                    //Route::get('/delivery-confirmation', [App\Http\Controllers\SalesInvoiceController::class, 'showDeliveryPage'])->name('transaction.sales_invoice.delivery_confirmation');
+                    //Route::get('/delivery-report', [App\Http\Controllers\SalesInvoiceController::class, 'summaryDelivery'])->name('transaction.sales_invoice_recap.delivery_report');
+                    //Route::post('/update-status', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatus'])->name('transaction.sales_invoice.update_status');
+                    //Route::get('/delivery-confirmation-cancel', [App\Http\Controllers\SalesInvoiceController::class, 'showCancelDeliveryPage'])->name('transaction.sales_invoice.delivery_confirmation_cancel');
+                    //Route::post('/update-status-cancel', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatusCancel'])->name('transaction.sales_invoice.update_status_cancel');
+                    //Route::get('/recalculate-journal', [App\Http\Controllers\SalesInvoiceController::class, 'recalcJournal']);
+                    //Route::get('/updateStatusDb', [App\Http\Controllers\SalesInvoiceController::class, 'updateStatusDb']);
 
 
                 });
             });
-            Route::middleware(['role:pbr'])->group(function () {
-                Route::prefix('pbr')->group(function () {
-                    Route::get('/', [App\Http\Controllers\PbrController::class, 'index'])->name('transaction.pbr');
-                    Route::get('/create', [App\Http\Controllers\PbrController::class, 'create'])->name('transaction.pbr.create'); // Show the form to create a new cash in
-                    Route::post('/store', [App\Http\Controllers\PbrController::class, 'store'])->name('transaction.pbr.store'); // Store a newly created cash in
-                    Route::get('/edit/{id}', [App\Http\Controllers\PbrController::class, 'edit'])->name('transaction.pbr.edit'); //
-                    // Update existing cash in using POST
-                    Route::put('/update/{id}', [App\Http\Controllers\PbrController::class, 'update'])->name('transaction.pbr.update');
-                    Route::post('/delete/{id}', [App\Http\Controllers\PbrController::class, 'destroy'])->name('transaction.pbr.destroy');
 
-                    Route::get('/pbr/{id}/print', [App\Http\Controllers\PbrController::class, 'printPDF'])
-                    ->name('pbr.print');
-                    Route::get('/summary', [App\Http\Controllers\PbrController::class, 'summary'])->name('transaction.pbr.summary');
-                    Route::get('/summary-detail', [App\Http\Controllers\PbrController::class, 'summaryDetail'])->name('transaction.pbr.summary_detail');
-
-                });
-            });
             Route::middleware(['role:debt_other'])->group(function () {
                 Route::prefix('debt-other')->group(function () {
                     Route::get('/', [App\Http\Controllers\DebtOtherController::class, 'index'])->name('transaction.debt_other');
@@ -600,10 +510,8 @@ Route::prefix('TDS')->group(function () {
                     Route::get('/create', [App\Http\Controllers\BankCashInController::class, 'create'])->name('transaction.bank_cash_in.create'); // Show the form to create a new cash in
                     Route::post('/store', [App\Http\Controllers\BankCashInController::class, 'store'])->name('transaction.bank_cash_in.store'); // Store a newly created cash in
                     Route::get('/edit/{id}', [App\Http\Controllers\BankCashInController::class, 'edit'])->name('transaction.bank_cash_in.edit'); // Show the form to edit a cash in
-
                     // Update existing cash in using POST
                     Route::post('/update/{id}', [App\Http\Controllers\BankCashInController::class, 'update'])->name('transaction.bank_cash_in.update');
-
                     Route::post('/delete/{id}', [App\Http\Controllers\BankCashInController::class, 'destroy'])->name('transaction.bank_cash_in.destroy'); // Delete a cash in
                     Route::get('/print/{id}', [App\Http\Controllers\BankCashInController::class, 'printPDF'])->name('transaction.bank_cash_in.print');
                 });
@@ -614,10 +522,8 @@ Route::prefix('TDS')->group(function () {
                     Route::get('/create', [App\Http\Controllers\BankCashOutController::class, 'create'])->name('transaction.bank_cash_out.create'); // Show the form to create a new cash in
                     Route::post('/store', [App\Http\Controllers\BankCashOutController::class, 'store'])->name('transaction.bank_cash_out.store'); // Store a newly created cash in
                     Route::get('/edit/{id}', [App\Http\Controllers\BankCashOutController::class, 'edit'])->name('transaction.bank_cash_out.edit'); // Show the form to edit a cash in
-
                     // Update existing cash in using POST
                     Route::post('/update/{id}', [App\Http\Controllers\BankCashOutController::class, 'update'])->name('transaction.bank_cash_out.update');
-
                     Route::post('/delete/{id}', [App\Http\Controllers\BankCashOutController::class, 'destroy'])->name('transaction.bank_cash_out.destroy'); // Delete a cash in
                     Route::get('/print/{id}', [App\Http\Controllers\BankCashOutController::class, 'printPDF'])->name('transaction.bank_cash_out.print');
                 });
@@ -628,10 +534,8 @@ Route::prefix('TDS')->group(function () {
                     Route::get('/create', [App\Http\Controllers\GeneralJournalController::class, 'create'])->name('transaction.general_journal.create'); // Show the form to create a new cash in
                     Route::post('/store', [App\Http\Controllers\GeneralJournalController::class, 'store'])->name('transaction.general_journal.store'); // Store a newly created cash in
                     Route::get('/edit/{id}', [App\Http\Controllers\GeneralJournalController::class, 'edit'])->name('transaction.general_journal.edit'); // Show the form to edit a cash in
-
                     // Update existing cash in using POST
                     Route::post('/update/{id}', [App\Http\Controllers\GeneralJournalController::class, 'update'])->name('transaction.general_journal.update');
-
                     Route::post('/delete/{id}', [App\Http\Controllers\GeneralJournalController::class, 'destroy'])->name('transaction.general_journal.destroy'); // Delete a cash in
                     Route::get('/print/{id}', [App\Http\Controllers\GeneralJournalController::class, 'printPDF'])->name('transaction.general_journal.print');
                 });
