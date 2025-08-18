@@ -1,0 +1,42 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sales_debt_credit_note', function (Blueprint $table) {
+            $table->id();
+            $table->string('sales_credit_note_number');
+            $table->dateTime('sales_credit_note_date');
+            $table->string('customer_code')->nullable();
+            $table->string('invoice_number');
+            $table->decimal('total',20,2);
+            $table->string('account_receivable');
+            $table->string('company_code')->unsigned();
+            $table->string('department_code');
+            $table->string('created_by');
+            $table->string('updated_by');
+            $table->string('status');
+            $table->timestamps();
+        });
+
+        Schema::table('sales_debt_credit_note', function($table) {
+            $table->foreign('company_code')->references('company_code')->on('company');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sales_debt_credit_note');
+    }
+};
