@@ -35,4 +35,9 @@ class PayablePaymentDetail extends Model
     public function paymentDetails(){
         return $this->hasMany(PayablePaymentDetailPay::class,'payable_payment_detail_id','payable_payment_detail_id');
     }
+
+    public function debts()
+    {
+        return $this->belongsTo(Debt::class,'document_number','document_number');
+    }
 }

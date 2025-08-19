@@ -33,4 +33,9 @@ class ReceivablePaymentDetail extends Model
     public function paymentDetails(){
         return $this->hasMany(ReceivablePaymentDetailPay::class,'receivable_payment_detail_id','receivable_payment_detail_id');
     }
+
+    public function receivables()
+    {
+        return $this->belongsTo(Receivable::class,'document_number','document_number');
+    }
 }

@@ -164,7 +164,7 @@
                                     <input type="text" name="details[{{ $index }}][document_date]" class="form-control" value="{{ substr($detail->document_date, 0, 10) }}" readonly />
                                 </td>
                                 <td>
-                                    <input type="text" name="details[{{ $index }}][document_payment]" id="balance_{{ $index }}" class="form-control text-end" value="{{ number_format($detail->document_payment, 0, '.', ',') }}" readonly />
+                                    <input type="text" name="details[{{ $index }}][document_payment]" id="balance_{{ $index }}" class="form-control text-end" value="{{ number_format($detail->receivables->debt_balance+$detail->document_payment, 0, '.', ',') }}" readonly />
                                 </td>
                                 <td>
                                     <input type="text"  id="nominal_{{ $index }}" class="form-control text-end nominal" value="{{ number_format(($detail->nominal - $detail->discount), 0, '.', ',') }}" />
