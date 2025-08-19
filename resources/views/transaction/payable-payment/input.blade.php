@@ -77,7 +77,7 @@ table {
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="search">{{__('Search Supplier')}}</label>
-                                <input type="text" id="search" class="form-control" placeholder="Search by Supplier Code, Name, or Address">
+                                <input type="text" id="search" class="form-control" placeholder="Search by Supplier Code, Name, or Address" autocomplete="off">
                                 <div id="search-results" class="list-group" style="display:none; position:relative; z-index:1000; width:100%;">
                                 </div>
                             </div>
@@ -104,7 +104,7 @@ table {
                             </div>
                             <div class="form-group">
                                 <label for="document_date">Tanggal {{__('Payable Payment')}}</label>
-                                <input type="date" name="document_date" class="form-control date-picker" required value="{{ date('Y-m-d') }}" id="document_date">
+                                <input type="date" id="document_date" name="document_date" class="form-control date-picker" required value="{{ date('Y-m-d') }}" id="document_date">
                             </div>
                             <br>
                             <div class="form-group">
@@ -135,6 +135,7 @@ table {
                 <div class="card-header">Detail {{__('Payable Payment')}}</div>
                 <div class="card-body">
                     <h5 class="text-end">Total Pembayaran: <span id="total-value">0</span></h5>
+                    <h5 class="text-end">Total Pembayaran Setelah Diskon: <span id="total-value-after-discount"></span></h5>
                     <table class="table" id="dynamicTable">
                         <thead>
                             <tr>
@@ -202,14 +203,14 @@ table {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($purchaseInvoices as $pi)
+                                    @foreach ($debts as $pi)
                                     <tr data-supplier="{{ $pi->supplier_code }}">
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $pi->debts->debt_balance }}" data-document-date="{{ $pi->document_date }}" value="{{ $pi->purchase_invoice_number }}">
+                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $pi }}" data-document-date="{{ $pi->document_date }}" value="{{ $pi->document_number }}">
                                         </td>
-                                        <td>{{ $pi->purchase_invoice_number }}</td>
+                                        <td>{{ $pi->document_number }}</td>
                                         <td>{{ $pi->document_date }}</td>
-                                        <td>Rp {{ number_format($pi->debts->debt_balance, 0, '.', ',') }}</td>
+                                        <td>Rp {{ number_format($pi->debt_balance, 0, '.', ',') }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -273,6 +274,7 @@ table {
         const inputElement = document.getElementById(inputId);
         const resultsContainer = document.getElementById(resultsContainerId);
         inputElement.addEventListener('input', function () {
+            activeIndex = -1;
             let query = this.value.toLowerCase();
             resultsContainer.innerHTML = '';
             resultsContainer.style.display = 'none';
@@ -302,12 +304,44 @@ table {
                 }
             }
         });
+        // Keydown event listener for navigation
+        inputElement.addEventListener('keydown', function(e) {
+            const items = resultsContainer.querySelectorAll('.list-group-item');
+            if (items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (activeIndex < items.length - 1) {
+                    activeIndex++;
+                    updateActiveItem(items);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeIndex > -1) { // Allow going back to no selection
+                    activeIndex--;
+                    updateActiveItem(items);
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (activeIndex >= 0 && items[activeIndex]) {
+                    items[activeIndex].click();
+                }
+            }
+        });
     }
 
     function clearInput(inputId) {
         document.getElementById(inputId).value = '';
         document.getElementById(inputId).readOnly = false;
         document.getElementById('acc_disc').value = '';
+    }
+    function updateActiveItem(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === activeIndex);
+        });
+        if (activeIndex >= 0) {
+            items[activeIndex].scrollIntoView({ block: 'nearest' });
+        }
     }
 
     setupSearch('search-acc-disc', 'search-result-acc-disc', 'acc_disc');
@@ -360,18 +394,21 @@ table {
     });
 
     function calculateTotals() {
-        let total = 0;
-        document.querySelectorAll('.nominal').forEach(function (input) {
-            input.value = input.value.replace(/,/g, '');
-            total += parseFloat(input.value) || 0;
-            let value = input.value.replace(/,/g, '');
-            let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            input.value = formattedValue;
+        let totalNominalPayment = 0;
+        let totalDiscount = 0;
+        document.querySelectorAll('#parentTbody tr').forEach(function (row, index) {
+            const nominalPayment = parseFloat(document.getElementById(`nominal_payment_${index}`).value.replace(/,/g, '')) || 0;
+            const discount = parseFloat(document.getElementById(`discount_${index}`).value.replace(/,/g, '')) || 0;
+            totalNominalPayment += nominalPayment;
+            totalDiscount += discount;
         });
-        let formattedTotal = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotal = totalNominalPayment.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotalAfterDiscount = (totalNominalPayment - totalDiscount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         document.getElementById('total-value').innerText = formattedTotal;
-        return total;
+        document.getElementById('total-value-after-discount').innerText = formattedTotalAfterDiscount;
     }
+
+    calculateTotals();
 
     function updateNominalValue(row) {
         const balance = parseFloat(document.getElementById(`balance_${row}`).value.replace(/,/g, '')) || 0;
@@ -513,7 +550,7 @@ table {
         $('#invoiceTable .invoice-checkbox:checked').each(function() {
             const invoiceNumber = $(this).val();
             const documentDate = $(this).data('document-date').substring(0, 10);
-            const debtBalance = $(this).data('debt-balance').toString().split('.')[0];
+            const debtBalance = $(this).data('debt-balance').debt_balance.toString().split('.')[0];
 
             selectedInvoices.push({
                 invoiceNumber: invoiceNumber,
@@ -577,6 +614,7 @@ table {
     });
 
     document.getElementById('payable-payment-form').addEventListener('submit', function(event) {
+        event.preventDefault();
         let isValid = true;
         const detailsJson = $(this).find(`input[id="payment_details"]`).val();
         const existingDetails = detailsJson ? JSON.parse(detailsJson) : [];
@@ -637,9 +675,52 @@ table {
             });
         }
 
+        const nominalPayment = parseFloat(document.getElementById('total-payment-value').innerText.replace(/,/g, '')) || 0;
+        let sumPaymentDetails = parseFloat(document.getElementById('total-value-after-discount').innerText.replace(/,/g, '')) || 0;
+
+        if (nominalPayment!=sumPaymentDetails) {
+            isValid = false; // Set flag to false
+            Swal.fire({
+                title: 'Error!',
+                text: 'Jumlah pembayaran belum sama dengan total pembayaran setelah diskon',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
 
         if (!isValid) {
             event.preventDefault();
+        }else{
+            const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+            $.ajax({
+                url: '{{ route("checkDateToPeriode") }}',
+                type: 'POST',
+                data: {
+                    date: documentDate,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response != true) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Date',
+                            text: 'Tidak bisa input tanggal pada periode !',
+                        });
+                        return; // Stop further execution
+                    }
+
+                    // All validations passed, submit form
+                    document.getElementById('payable-payment-form').submit();
+                },
+                error: function(xhr) {
+                    console.log(xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to validate date. Please try again.',
+                    });
+                }
+            });
         }
     });
 </script>

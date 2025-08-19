@@ -23,7 +23,7 @@ class BankCashInController extends Controller
         $companies = Company::all();
         $departments = Department::where('department_code', 'DP01')->first();
         $bankCashInRecords = BankCashIn::all();
-        $coas = COA::orderBy('account_number', 'asc')->get();
+        $coas = Coa::orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['bank_in'];
         return view('transaction.bank-cash-in.bank_cash_in_list', compact('companies', 'departments', 'bankCashInRecords', 'coas','privileges'));
     }
@@ -57,7 +57,7 @@ class BankCashInController extends Controller
     public function create() {
         $companies = Company::all();
         $departments = Department::where('department_code', 'DP01')->first();
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $token = str()->random(16);
         // Generate bank cash in number
         $privileges = Auth::user()->roles->privileges['bank_in'];
@@ -75,12 +75,14 @@ class BankCashInController extends Controller
             $bank_cash_in_number = $this->generateBankCashInNumber($request->bank_cash_in_date);
             // Calculate total nominal before creating BankCashIn entry
             $totalNominal = 0;
+            $notes='';
 
             // Validate and accumulate the total nominal
             foreach ($request->details as $detail) {
                 if (isset($detail['nominal'])) {
                     $detail['nominal'] = str_replace(',', '', $detail['nominal']??0);
                     $totalNominal += $detail['nominal'];
+                    $notes .=$detail['note'].' | ';
                 }
             }
 
@@ -106,7 +108,7 @@ class BankCashInController extends Controller
             $journal->account_number = $request->account_number;
             $journal->debet_nominal = $cashIn->nominal;
             $journal->credit_nominal = 0;
-            $journal->notes = $request->note??'';
+            $journal->notes = $notes;
             $journal->company_code = $request->company_code;
             $journal->department_code = $request->department_code;
             $journal->created_by = Auth::user()->username;
@@ -139,7 +141,7 @@ class BankCashInController extends Controller
         try {
             $companies = Company::all();
             $departments = Department::where('department_code', 'DP01')->first();
-            $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+            $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
 
             // Fetch BankCashIn with its related details
             $bankCashIn = BankCashIn::with('details')->findOrFail($id);
@@ -170,6 +172,7 @@ class BankCashInController extends Controller
             // Cari BankCashIn berdasarkan ID
             $bankCashIn = BankCashIn::findOrFail($id);
 
+
             // Update data utama BankCashIn
             $bankCashIn->bank_cash_in_date = Carbon::createFromFormat('Y-m-d', $request->bank_cash_in_date); // Menggunakan Carbon untuk parsing
             $bankCashIn->account_number = $request->account_number ?? $bankCashIn->account_number;
@@ -183,6 +186,7 @@ class BankCashInController extends Controller
 
             // Total nominal yang diupdate
             $totalNominal = 0;
+            $notes='';
 
             // Jika ada detail baru, simpan ulang detailnya
             if ($request->has('details')) {
@@ -190,6 +194,7 @@ class BankCashInController extends Controller
                     if (isset($detail['nominal'])) {
                         $detail['nominal'] = str_replace(',', '', $detail['nominal']??0);
                         $totalNominal += $detail['nominal']; // Kalkulasi total nominal
+                        $notes .=$detail['note'].' | ';
                     }
                 }
 
@@ -200,7 +205,7 @@ class BankCashInController extends Controller
                 $journal->account_number = $request->account_number;
                 $journal->debet_nominal = $totalNominal;
                 $journal->credit_nominal = 0;
-                $journal->notes = $request->note??'';
+                $journal->notes = $notes;
                 $journal->company_code = $request->company_code;
                 $journal->department_code = $request->department_code;
                 $journal->created_by = Auth::user()->username;

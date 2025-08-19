@@ -22,7 +22,7 @@ class GeneralJournalController extends Controller
         $companies = Company::all();
         $departments = Department::where('department_code', 'DP01')->first();
         $generalJournals = GeneralJournal::all();
-        $coas = COA::all();
+        $coas = Coa::all();
         $privileges = Auth::user()->roles->privileges['general_journal'];
 
         return view('transaction.general-journal.general_journal_list', compact('companies', 'departments', 'generalJournals', 'coas','privileges'));

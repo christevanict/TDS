@@ -25,12 +25,11 @@
 					<table id="example" class="table table-hover table-bordered" style="width:100%">
 						<thead>
 							<tr>
-								<th>Asset Type Code</th>
-								<th>Asset Type Name</th>
-                                <th>Economic Life</th>
-                                <th>Tariff Depreciation</th>
-								<th>Company</th>
-                                <th>{{__('Department')}}</th>
+                                <th>No</th>
+								<th>Kode Tipe Asset</th>
+								<th>Nama Tipe Asset</th>
+                                <th>Jenis Depresiasi</th>
+                                <th>Umur / Rasio Depresiasi</th>
 								<th>Action</th>
 							</tr>
 						</thead>
@@ -39,32 +38,29 @@
                                 <tr class='clickable-row' data-bs-toggle="modal" data-bs-target="#modalInput"  onclick="editCategory(
                                     '{{ addslashes($assetType->asset_type_code ?? '') }}',
                                     '{{ addslashes($assetType->asset_type_name ?? '') }}',
+                                    '{{ addslashes($assetType->depreciation_code ?? '') }}',
                                     '{{ addslashes($assetType->economic_life ?? '') }}',
                                     '{{ addslashes($assetType->tariff_depreciation ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_asset ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_akum_depreciation ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_depreciation ?? '') }}',
-                                    '{{ addslashes($assetType->company_code ?? '') }}',
-                                    '{{ addslashes($assetType->department_code ?? '') }}'
                                 )">
+                                    <td>{{$loop->iteration}}</td>
                                     <td>{{$assetType->asset_type_code}}</td>
                                     <td>{{$assetType->asset_type_name}}</td>
+                                    <td>{{$assetType->depreciation_code}}</td>
                                     <td>{{$assetType->economic_life}}</td>
-                                    <td>{{$assetType->tariff_depreciation}}</td>
-                                    <td>{{$assetType->company ? $assetType->company->company_name:''}}</td>
-                                    <td>{{$assetType->department ? $assetType->department->department_name:''}}</td>
                                     <td>
 
                                     <button class="btn btn-sm btn-warning" onclick="editCategory(
                                     '{{ addslashes($assetType->asset_type_code ?? '') }}',
                                     '{{ addslashes($assetType->asset_type_name ?? '') }}',
+                                    '{{ addslashes($assetType->depreciation_code ?? '') }}',
                                     '{{ addslashes($assetType->economic_life ?? '') }}',
                                     '{{ addslashes($assetType->tariff_depreciation ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_asset ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_akum_depreciation ?? '') }}',
                                     '{{ addslashes($assetType->acc_number_depreciation ?? '') }}',
-                                    '{{ addslashes($assetType->company_code ?? '') }}',
-                                    '{{ addslashes($assetType->department_code ?? '') }}'
                                         )"><i class="material-icons-outlined">edit</i></button>
                                         <form id="delete-form-{{ $assetType->asset_type_code}}" action="{{ url('/TDS/master/asset-type/delete/' . $assetType->asset_type_code) }}" method="POST" style="display:inline;">
                                             @csrf
@@ -78,12 +74,11 @@
 
 						<tfoot>
 							<tr>
-								<th>Asset Type Code</th>
-								<th>Asset Type Name</th>
-                                <th>Economic Life</th>
-                                <th>Tariff Depreciation</th>
-								<th>Company</th>
-                                <th>{{__('Department')}}</th>
+                                <th>No</th>
+								<th>Kode Tipe Asset</th>
+								<th>Nama Tipe Asset</th>
+                                <th>Jenis Depresiasi</th>
+                                <th>Umur / Rasio Depresiasi</th>
 								<th>Action</th>
 							</tr>
 						</tfoot>
@@ -102,61 +97,62 @@
                 <div class="modal-body">
                     <form name="asset-type-form" id="asset-type-form" method="post" action="{{url('/TDS/master/asset-type/insert')}}">
                         @csrf
-                    <label for="exampleInputEmail1" class="form-label">Asset Type Code</label>
+                    <label for="exampleInputEmail1" class="form-label">Kode Tipe Asset</label>
                     <div class="input-group mb-3">
-                        <input type="text" id="asset_type_code" name="asset_type_code" class="form-control" placeholder="Asset Type Code" aria-label="asset_type_code" aria-describedby="basic-addon1">
+                        <input type="text" id="asset_type_code" name="asset_type_code" class="form-control" placeholder="Kode Tipe Asset" aria-label="asset_type_code" aria-describedby="basic-addon1">
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Asset Type Name</label>
+                    <label for="exampleInputEmail1" class="form-label">Nama Tipe Asset</label>
                     <div class="input-group mb-3">
-                        <input type="text" id="asset_type_name" name="asset_type_name" class="form-control" placeholder="Asset Type Name" aria-label="asset_type_name" aria-describedby="basic-addon1">
+                        <input type="text" id="asset_type_name" name="asset_type_name" class="form-control" placeholder="Nama Tipe Asset" aria-label="asset_type_name" aria-describedby="basic-addon1">
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Economic Life</label>
+                    <label for="exampleInputEmail1" class="form-label">Metode Depresiasi</label>
                     <div class="input-group mb-3">
-                        <input type="number" id="economic_life" name="economic_life" class="form-control" placeholder="Economic Life" aria-label="economic_life" aria-describedby="basic-addon1">
+                        <select name="depreciation_code" class="form-control" id="depreciation_code">
+                            @foreach ($depreciations as $depr)
+                                <option value="{{$depr->depreciation_code}}">{{$depr->depreciation_code}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <label for="exampleInputEmail1" class="form-label">Umur Depresiasi</label>
+                    <div class="input-group mb-3">
+                        <input type="number" id="economic_life" name="economic_life" class="form-control" placeholder="Umur Depresiasi" aria-label="economic_life" aria-describedby="basic-addon1">
                     </div>
                     <label for="exampleInputEmail1" class="form-label">Tariff Depreciation</label>
                     <div class="input-group mb-3">
                         <input type="number" id="tariff_depreciation" name="tariff_depreciation" class="form-control" placeholder="Tariff Depreciation" aria-label="tariff_depreciation" aria-describedby="basic-addon1">
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Company</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="company_code" name="company_code">
-                            @foreach ($companies as $company)
-                                <option value={{$company->company_code}}>{{$company->company_code.' '.$company->company_name}}</option>
-                            @endforeach
-                        </select>
+                    <label for="exampleInputEmail1" class="form-label">Akun Aktiva Asset</label>
+                    <div class="form-group mb-3">
+                        <div class="input-group">
+                            <input type="text" id="search-acc-number-asset" class="form-control" placeholder="Search by Account Number or Account Name" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearInput('search-acc-number-asset')"><i class="material-icons-outlined">edit</i></button>
+                        </div>
+                        <div id="search-result-acc-number-asset" class="list-group" style="display:none; position:relative; z-index:1000; width:100%; max-height:200px; overflow:scroll;">
+                            <!-- Search results will be injected here -->
+                        </div>
+                        <input type="hidden" name="acc_number_asset" id="acc_number_asset">
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Acc Number Asset</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="acc_number_asset" name="acc_number_asset">
-                            @foreach ($coas as $coa)
-                                <option data-company="{{$coa->company_code}}" value={{$coa->account_number}}>{{$coa->account_number.' '.$coa->account_name}}</option>
-                            @endforeach
-                        </select>
+                    <label for="exampleInputEmail1" class="form-label">Akun Akumulasi Penyusutan</label>
+                    <div class="form-group mb-3">
+                        <div class="input-group">
+                            <input type="text" id="search-acc-akum" class="form-control" placeholder="Search by Account Number or Account Name" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearInput('search-acc-akum')"><i class="material-icons-outlined">edit</i></button>
+                        </div>
+                        <div id="search-result-acc-akum" class="list-group" style="display:none; position:relative; z-index:1000; width:100%; max-height:200px; overflow:scroll;">
+                            <!-- Search results will be injected here -->
+                        </div>
+                        <input type="hidden" name="acc_number_akum_depreciation" id="acc_number_akum_depreciation">
                     </div>
-                    <label for="exampleInputEmail1" class="form-label">Acc Number Akum Depreciation</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="acc_number_akum_depreciation" name="acc_number_akum_depreciation">
-                            @foreach ($coas as $coa)
-                                <option data-company="{{$coa->company_code}}" value={{$coa->account_number}}>{{$coa->account_number.' '.$coa->account_name}}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <label for="exampleInputEmail1" class="form-label">Acc Number Depreciation</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="acc_number_depreciation" name="acc_number_depreciation">
-                            @foreach ($coas as $coa)
-                                <option data-company="{{$coa->company_code}}" value={{$coa->account_number}}>{{$coa->account_number.' '.$coa->account_name}}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <label for="exampleInputEmail1" class="form-label">{{__('Department')}}</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="department_code" name="department_code">
-                            @foreach ($departments as $department)
-                                <option value={{$department->department_code}}>{{$department->department_code.' '.$department->department_name}}</option>
-                            @endforeach
-                        </select>
+                    <label for="exampleInputEmail1" class="form-label">Akun Beban Penyusutan</label>
+                    <div class="form-group mb-3">
+                        <div class="input-group">
+                            <input type="text" id="search-acc-depr" class="form-control" placeholder="Search by Account Number or Account Name" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearInput('search-acc-depr')"><i class="material-icons-outlined">edit</i></button>
+                        </div>
+                        <div id="search-result-acc-depr" class="list-group" style="display:none; position:relative; z-index:1000; width:100%; max-height:200px; overflow:scroll;">
+                            <!-- Search results will be injected here -->
+                        </div>
+                        <input type="hidden" name="acc_number_depreciation" id="acc_number_depreciation">
                     </div>
                     <button id="btn-action" name="btn-action" type="submit" class="btn btn-primary btn-md">Insert</button>
                     <button type="button" class="btn btn-danger" id="cancelButton" style="display:none;" data-bs-dismiss="modal" onclick="cancelEdit()">Cancel</button>
@@ -227,16 +223,106 @@
             })
         }
 
+        const coas = @json($coas);
+
+         function setupSearch(inputId, resultsContainerId,inputHid) {
+            const inputElement = document.getElementById(inputId);
+            const resultsContainer = document.getElementById(resultsContainerId);
+
+            inputElement.addEventListener('input', function () {
+                activeIndex = -1;
+                let query = this.value.toLowerCase();
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
+
+                if (query.length > 0) {
+                    let filteredResults = coas.filter(item =>
+                        item.account_number.toLowerCase().includes(query) ||
+                        item.account_name.toLowerCase().includes(query)
+                    );
+
+                    if (filteredResults.length > 0) {
+                        resultsContainer.style.display = 'block';
+                        filteredResults.forEach(item => {
+                            let listItem = document.createElement('a');
+                            listItem.className = 'list-group-item list-group-item-action';
+                            listItem.href = '#';
+                            listItem.innerHTML = `
+                                <strong>${item.account_number}</strong> -
+                                ${item.account_name} <br>`;
+                            listItem.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                inputElement.value = item.account_number + ' - ' + item.account_name;
+                                inputElement.readOnly = true;
+                                document.getElementById(inputHid).value = item.account_number;
+                                resultsContainer.style.display = 'none';
+                            });
+                            resultsContainer.appendChild(listItem);
+                        });
+                    }
+                }
+            });
+            // Keydown event listener for navigation
+            inputElement.addEventListener('keydown', function(e) {
+                const items = resultsContainer.querySelectorAll('.list-group-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeIndex < items.length - 1) {
+                        activeIndex++;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeIndex > -1) { // Allow going back to no selection
+                        activeIndex--;
+                        updateActiveItem(items);
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIndex >= 0 && items[activeIndex]) {
+                        items[activeIndex].click();
+                    }
+                }
+            });
+        }
+
+        function clearInput(inputId) {
+            document.getElementById(inputId).value = '';
+            document.getElementById(inputId).readOnly = false;
+        }
+        function updateActiveItem(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+            if (activeIndex >= 0) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        setupSearch('search-acc-number-asset', 'search-result-acc-number-asset','acc_number_asset');
+        setupSearch('search-acc-akum', 'search-result-acc-akum','acc_number_akum_depreciation');
+        setupSearch('search-acc-depr', 'search-result-acc-depr','acc_number_depreciation');
+
         function cancelEdit() {
             document.getElementById('asset_type_code').value = '';
             document.getElementById('asset_type_name').value = '';
+            document.getElementById('depreciation_code').value = '';
             document.getElementById('economic_life').value = '';
             document.getElementById('tariff_depreciation').value = '';
             document.getElementById('acc_number_asset').value = '';
+            document.getElementById('search-acc-number-asset').value ='';
+            document.getElementById('search-acc-number-asset').readOnly = false;
+
             document.getElementById('acc_number_akum_depreciation').value = '';
+            document.getElementById('search-acc-akum').value ='';
+            document.getElementById('search-acc-akum').readOnly = false;
+
             document.getElementById('acc_number_depreciation').value = '';
-            document.getElementById('company_code').value = '';
-            document.getElementById('department_code').value = '';
+            document.getElementById('search-acc-depr').value ='';
+            document.getElementById('search-acc-depr').readOnly = false;
+
             document.getElementById('legendForm').innerText = 'Asset Type Insert';
             document.getElementById('cancelButton').style.display = 'none';
             document.getElementById('btn-action').innerText = 'Insert';
@@ -244,16 +330,28 @@
         }
 
 
-        function editCategory(asset_type_code,asset_type_name,economic_life,tariff_depreciation,acc_number_asset,acc_number_akum_depreciation,acc_number_depreciation,company_code, department_code) {
+        function editCategory(asset_type_code,asset_type_name,depreciation_code,economic_life,tariff_depreciation,acc_number_asset,acc_number_akum_depreciation,acc_number_depreciation,company_code, department_code) {
+            let textDisplay ='';
             document.getElementById('asset_type_code').value = asset_type_code;
             document.getElementById('asset_type_name').value = asset_type_name;
+            document.getElementById('depreciation_code').value = depreciation_code;
             document.getElementById('economic_life').value = economic_life;
             document.getElementById('tariff_depreciation').value = tariff_depreciation;
             document.getElementById('acc_number_asset').value = acc_number_asset;
+            textDisplay = coas.find((element)=>element.account_number ==acc_number_asset).account_name;
+            document.getElementById('search-acc-number-asset').value = acc_number_asset+' - '+textDisplay;
+            document.getElementById('search-acc-number-asset').readOnly = true;
+
             document.getElementById('acc_number_akum_depreciation').value = acc_number_akum_depreciation;
+            textDisplay = coas.find((element)=>element.account_number ==acc_number_akum_depreciation).account_name;
+            document.getElementById('search-acc-akum').value = acc_number_akum_depreciation+' - '+textDisplay;
+            document.getElementById('search-acc-akum').readOnly = true;
+
             document.getElementById('acc_number_depreciation').value = acc_number_depreciation;
-            document.getElementById('company_code').value = company_code;
-            document.getElementById('department_code').value = department_code;
+            textDisplay = coas.find((element)=>element.account_number ==acc_number_depreciation).account_name;
+            document.getElementById('search-acc-depr').value = acc_number_depreciation+' - '+textDisplay;
+            document.getElementById('search-acc-depr').readOnly = true;
+
             document.getElementById('legendForm').innerText = 'Asset Type Update';
             document.getElementById('cancelButton').style.display = 'inline-block';
             document.getElementById('btn-action').innerText = 'Edit';
@@ -268,35 +366,5 @@
         var accNumberAsset = document.getElementById('acc_number_asset');
         var accNumberAkumDepreciation = document.getElementById('acc_number_akum_depreciation');
         var accNumberDepreciation = document.getElementById('acc_number_depreciation');
-
-        // Add event listener for when the company is selected
-        companySelect.addEventListener('change', function() {
-            var selectedCompany = this.value;
-            economicLife.value = '';
-            tariffDepreciation.value = '';
-            accNumberAsset.value = '';
-            accNumberAkumDepreciation.value = '';
-            accNumberDepreciation.value = '';
-            for (var i = 0; i < accNumberAsset.options.length; i++) {
-                var optionNumAss = accNumberAsset.options[i];
-                var optionNumAk = accNumberAkumDepreciation.options[i];
-                var optionNumDe = accNumberDepreciation.options[i];
-                var coaCompanyCode = optionNumAss.getAttribute('data-company');
-                if (selectedCompany === "" || coaCompanyCode === selectedCompany) {
-                    // optionEco.style.display = 'block';
-                    // optionTarr.style.display = 'block';
-                    optionNumAss.style.display = 'block';
-                    optionNumAk.style.display = 'block';
-                    optionNumDe.style.display = 'block';
-                } else {
-                    // optionEco.style.display = 'none';
-                    // optionTarr.style.display = 'none';
-                    optionNumAss.style.display = 'none';
-                    optionNumAk.style.display = 'none';
-                    optionNumDe.style.display = 'none';
-                }
-            }
-            accNumberAsset.value = '';
-        });
     </script>
 @endsection

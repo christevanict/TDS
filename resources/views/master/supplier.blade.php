@@ -23,11 +23,11 @@
                 data-bs-target="#modalInput" @if(!in_array('create', $privileges)) disabled @endif>
                 Tambah Baru
                 </button>
-                <a style="font-size:25px"> | </a>
-                <button type="button" class="mb-3 btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport" @if(!in_array('create', $privileges)) disabled @endif>
+                {{-- <a style="font-size:25px"> | </a> --}}
+                <button type="button" class="mb-3 btn btn-success d-none" data-bs-toggle="modal" data-bs-target="#modalImport" @if(!in_array('create', $privileges)) disabled @endif>
                     Import
                 </button>
-                <a href="{{ route('supplier.export') }}" class="mb-3 btn btn-secondary">Download Template <i class="fa fa-download"></i>
+                <a href="{{ route('supplier.export') }}" class="mb-3 btn btn-secondary d-none">Download Template <i class="fa fa-download"></i>
                 </a>
                 <div class="table-responsive">
                     <table id="example" class="table table-hover table-bordered" style="width:100%">
@@ -113,10 +113,6 @@
                     <label for="exampleInputEmail1" class="form-label">{{__('Address')}}</label>
                     <div class="input-group mb-3">
                         <input type="text" id="address" name="address" class="form-control" placeholder="Address" aria-label="address" aria-describedby="basic-addon1" required>
-                    </div>
-                    <label for="exampleInputEmail1" class="form-label">Warehouse {{__('Address')}}</label>
-                    <div class="input-group mb-3">
-                        <input type="text" id="warehouse_address" name="warehouse_address" class="form-control" placeholder="Warehouse Address" aria-label="warehouse_address" aria-describedby="basic-addon1" required>
                     </div>
                     <label for="exampleInputEmail1" class="form-label">{{__('Phone Number')}}</label>
                     <div class="input-group mb-3">
@@ -352,7 +348,6 @@
             document.getElementById('supplier_code').value = '';
             document.getElementById('supplier_name').value = '';
             document.getElementById('address').value = '';
-            document.getElementById('warehouse_address').value = '';
             document.getElementById('phone_number').value = '';
             // document.getElementById('department').value = '';
             // document.getElementById('currency_code').value = '';
@@ -363,7 +358,6 @@
             document.getElementById('supplier_code').value = '';
             document.getElementById('supplier_name').value = '';
             document.getElementById('address').value = '';
-            document.getElementById('warehouse_address').value = '';
             document.getElementById('phone_number').value = '';
             // document.getElementById('currency_code').value = '';
 
@@ -384,7 +378,6 @@
             document.getElementById('supplier_code').value =supplier_code;
             document.getElementById('supplier_name').value = supplier_name;
             document.getElementById('address').value = address;
-            document.getElementById('warehouse_address').value = warehouse_address;
             document.getElementById('phone_number').value = phone_number;
 
             let textDisplay ='';
@@ -421,6 +414,7 @@ function setupSearch(inputId, resultsContainerId,inputHid) {
     const resultsContainer = document.getElementById(resultsContainerId);
 
     inputElement.addEventListener('input', function () {
+        activeIndex = -1;
         let query = this.value.toLowerCase();
         resultsContainer.innerHTML = '';
         resultsContainer.style.display = 'none';
@@ -452,11 +446,43 @@ function setupSearch(inputId, resultsContainerId,inputHid) {
             }
         }
     });
+    // Keydown event listener for navigation
+    inputElement.addEventListener('keydown', function(e) {
+        const items = resultsContainer.querySelectorAll('.list-group-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (activeIndex < items.length - 1) {
+                activeIndex++;
+                updateActiveItem(items);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (activeIndex > -1) { // Allow going back to no selection
+                activeIndex--;
+                updateActiveItem(items);
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0 && items[activeIndex]) {
+                items[activeIndex].click();
+            }
+        }
+    });
 }
 
 function clearInput(inputId) {
     document.getElementById(inputId).value = '';
     document.getElementById(inputId).readOnly = false;
+}
+function updateActiveItem(items) {
+    items.forEach((item, index) => {
+        item.classList.toggle('active', index === activeIndex);
+    });
+    if (activeIndex >= 0) {
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
 }
 
 setupSearch('search-acc-payable', 'search-result-acc-payable','account_payable');

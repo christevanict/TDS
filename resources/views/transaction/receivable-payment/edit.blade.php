@@ -140,6 +140,7 @@
                 <div class="card-header">Detail {{__('Receivable Payment')}}</div>
                 <div class="card-body">
                     <h5 class="text-end">Total Pembayaran: <span id="total-value">{{ number_format($receivable->total_debt, 0, '.', ',') }}</span></h5>
+                    <h5 class="text-end">Total Pembayaran Setelah Diskon: <span id="total-value-after-discount">{{ number_format($receivable->total_debt, 0, '.', ',') }}</span></h5>
                     <table class="table" id="dynamicTable">
                         <thead>
                             <tr>
@@ -235,14 +236,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($salesInvoices as $si)
-                                    <tr data-customer={{$si->customers->group_customer}}>
+                                    @foreach ($receivables as $si)
+                                    <tr data-customer={{$si->customer_code}}>
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $si->receivables }}" data-document-date="{{ $si->document_date }}" value="{{ $si->sales_invoice_number }}">
+                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $si }}" data-document-date="{{ $si->document_date }}" value="{{ $si->document_number }}">
                                         </td>
-                                        <td>{{ $si->sales_invoice_number }}</td>
+                                        <td>{{ $si->document_number }}</td>
                                         <td>{{ $si->document_date }}</td>
-                                        <td>Rp {{ number_format($si->receivables->debt_balance,0,'.',',')}}</td>
+                                        <td>Rp {{ number_format($si->debt_balance,0,'.',',')}}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -405,18 +406,23 @@
     }
 
     function calculateTotals() {
-        let total = 0;
-        document.querySelectorAll('.nominal').forEach(function (input) {
-            input.value = input.value.replace(/,/g, '');
-            total += parseFloat(input.value) || 0;
-            let value = input.value.replace(/,/g, '');
-            let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            input.value = formattedValue;
+        let totalNominalPayment = 0;
+        let totalDiscount = 0;
+        document.querySelectorAll('#parentTbody tr').forEach(function (row, index) {
+            const nominalPayment = parseFloat(document.getElementById(`nominal_payment_${index}`).value.replace(/,/g, '')) || 0;
+            const discount = parseFloat(document.getElementById(`discount_${index}`).value.replace(/,/g, '')) || 0;
+            console.log(discount);
+            console.log(nominalPayment);
+
+            totalNominalPayment += nominalPayment;
+            totalDiscount += discount;
         });
-        let formattedTotal = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotal = totalNominalPayment.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotalAfterDiscount = (totalNominalPayment - totalDiscount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         document.getElementById('total-value').innerText = formattedTotal;
-        return total;
+        document.getElementById('total-value-after-discount').innerText = formattedTotalAfterDiscount;
     }
+    calculateTotals();
 
     function addInputListeners() {
         document.querySelectorAll('.nominal').forEach(function (input) {
@@ -460,6 +466,62 @@
 
     const details = @json($receivable_detail_pays);
     const paymentMethods = @json($paymentMethods);
+
+    function initDataPayment(){
+        const detailsBody = $(this).find('.details-body');
+        detailsBody.empty();
+
+        function groupAndSum(data) {
+            const grouped = data.reduce((acc, { payment_method, payment_nominal, bg_check_number }) => {
+                const key = `${payment_method}-${bg_check_number || 'NO_BG'}`;
+                if (!acc[key]) {
+                    acc[key] = { payment_method, bg_check_number, total_nominal: 0 };
+                }
+                acc[key].total_nominal += parseFloat(payment_nominal);
+                return acc;
+            }, {});
+            return Object.values(grouped);
+        }
+
+        const groupedData = groupAndSum(details);
+        const detailsArray = [];
+        let total = 0;
+
+        groupedData.forEach((detail, index) => {
+            total+= detail.total_nominal;
+            const detailRow = `
+                <tr>
+                    <td>
+                        <select class="form-control" name="payment_details[${index}][payment_method]">
+                            @foreach ($paymentMethods as $method)
+                                <option value="{{ $method->payment_method_code }}" ${detail.payment_method === '{{ $method->payment_method_code }}' ? 'selected' : ''}>
+                                    {{ $method->payment_name }} ({{ $method->payment_method_code }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td><input type="text" oninput="formatNumber(this)" class="form-control" name="payment_details[${index}][payment_nominal]" value="${detail.total_nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" /></td>
+                    <td><input type="number" placeholder="BG Check Number" class="form-control" name="payment_details[${index}][bg_check_number]" value="${detail.bg_check_number || ''}" /></td>
+                    <td><button class="btn btn-danger deleteDetail"><i class="material-icons-outlined remove-row">remove</i></button></td>
+                </tr>
+            `;
+            const detail2 = {
+                payment_method: detail.payment_method,
+                payment_nominal: detail.total_nominal,
+                bg_check_number: detail.bg_check_number,
+            };
+
+            const hiddenInput = `
+                <input type="hidden" name="payment_details[${index}][payment]" value='${JSON.stringify(detail2)}' />
+            `;
+            document.getElementById('total-payment-value').innerText = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            $(`#pay-row`).append(hiddenInput);
+
+            detailsBody.append(detailRow);
+        });
+    }
+
+    initDataPayment();
 
 
     $('#detailsModal').on('show.bs.modal', function () {
@@ -685,15 +747,23 @@
             totalNominalPayment += nominal;
         });
 
-        let sumPaymentDetails = 0;
-        existingDetails.forEach(detail => {
-            sumPaymentDetails += parseFloat(detail.payment_nominal) || 0;
-        });
+        const nominalPayment = parseFloat(document.getElementById('total-payment-value').innerText.replace(/,/g, '')) || 0;
+        let sumPaymentDetails = parseFloat(document.getElementById('total-value-after-discount').innerText.replace(/,/g, '')) || 0;
+
+        if (nominalPayment!=sumPaymentDetails) {
+            isValid = false; // Set flag to false
+            Swal.fire({
+                title: 'Error!',
+                text: 'Jumlah pembayaran belum sama dengan total pembayaran setelah diskon',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+
         if (!isValid) {
             event.preventDefault();
         }else{
-            // Perform date validation via AJAX
-            const documentDate = document.getElementById('document_date').value; // Assuming the date input has this ID
+            const documentDate = document.getElementById('document_date').value;
             $.ajax({
                 url: '{{ route("checkDateToPeriode") }}',
                 type: 'POST',

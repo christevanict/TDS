@@ -30,23 +30,31 @@ class PayablePaymentController extends Controller
         return view('transaction.payable-payment.index', compact('pays', 'privileges'));
     }
 
-    private function generatePayablePaymentNumber($company, $department)
+    private function generatePayablePaymentNumber($date)
     {
-        $today = date('ym');
-        $lastPayablePayment = PayablePayment::orderBy('created_at', 'desc')->first();
+        $today = Carbon::parse($date);
+        $month = $today->format('n'); // Numeric representation of a month (1-12)
+        $year = $today->format('y');
+        // Convert month to Roman numeral
+        $romanMonths = [
+            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+        ];
+        $romanMonth = $romanMonths[$month];
+        $prefix = "TDS/PAP/{$romanMonth}/{$year}-"; //
+
+        $lastPayablePayment = PayablePayment::whereRaw('SUBSTRING(payable_payment_number, 1, ?) = ?', [strlen($prefix), $prefix])
+            ->orderBy('payable_payment_number', 'desc')
+            ->first();
 
         if ($lastPayablePayment) {
-            $lastMonth = date('ym', strtotime($lastPayablePayment->created_at));
-            if ($lastMonth === $today) {
-                $lastNumber = (int)substr($lastPayablePayment->payable_payment_number, -4);
-                $newNumber = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
-            } else {
-                $newNumber = '00001';
-            }
+            $lastNumber = (int)substr($lastPayablePayment->payable_payment_number, -5);
+            $newNumber = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
         } else {
             $newNumber = '00001';
         }
-        return 'PAP/' . $company . '/' . $department . '/' . $today . '/' . $newNumber;
+
+        return "$prefix$newNumber";
     }
 
     public function create()
@@ -54,13 +62,11 @@ class PayablePaymentController extends Controller
         $departments = Department::where('department_code', 'DP01')->first();
         $paymentMethods = PaymentMethod::orderBy('id', 'asc')->get();
         $suppliers = Supplier::orderBy('id', 'asc')->get();
-        $purchaseInvoices = PurchaseInvoice::with('debts')->whereHas('debts', function ($query) {
-            $query->where('debt_balance', '>', 0);
-        })->get();
-        $coas = Coa::orderBy('id', 'asc')->get();
+        $debts = Debt::whereRaw('FLOOR(debt_balance) != 0')->orderBy('document_date','asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $token = Str::random(16);
         $privileges = Auth::user()->roles->privileges['payable_payment'];
-        return view('transaction.payable-payment.input', compact('departments', 'paymentMethods', 'suppliers', 'coas', 'purchaseInvoices', 'privileges', 'token'));
+        return view('transaction.payable-payment.input', compact('departments', 'paymentMethods', 'suppliers', 'coas', 'debts', 'privileges', 'token'));
     }
 
     private function saveDetails($request, $payable_payment_number, $payable_payment_date, $supplier_code, $company_code, $department_code, &$total_nominal, &$total_discount)
@@ -145,11 +151,11 @@ class PayablePaymentController extends Controller
                     $invoice['nominal_payment'] = str_replace(',', '', $invoice['nominal_payment'] ?? 0);
                     $invoice['discount'] = str_replace(',', '', $invoice['discount'] ?? 0);
 
-                    if ($remaining_amount <= 0) break;
-
-                    if ($invoice['nominal_payment'] <= 0) continue;
-
-                    $amount_to_apply = min($invoice['nominal_payment'], $remaining_amount);
+                    if($remaining_amount>0){
+                        $amount_to_apply = min($invoice['nominal_payment'], $remaining_amount);
+                    }else{
+                        $amount_to_apply = max($invoice['nominal_payment'], $remaining_amount);
+                    }
                     $invoices[$index]['nominal_payment'] -= $amount_to_apply;
                     $remaining_amount -= $amount_to_apply;
 
@@ -170,23 +176,80 @@ class PayablePaymentController extends Controller
                             'created_by' => $currentUser,
                             'updated_by' => $currentUser,
                         ]);
-
-                        Journal::create([
-                            'document_number' => $payable_payment_number,
-                            'document_date' => $payable_payment_date,
-                            'account_number' => $payment_method->account_number,
-                            'notes' => 'Payment for ' . $invoice['document_number'] . ' by ' . $payment_method->payment_name,
-                            'debet_nominal' => 0,
-                            'credit_nominal' => $amount_to_apply,
-                            'company_code' => $company_code,
-                            'department_code' => $department_code,
-                            'created_by' => $currentUser,
-                            'updated_by' => $currentUser,
-                        ]);
                     }
                 }
             }
         }
+        $supplier = Supplier::where('supplier_code', $request->supplier_code)->first();
+        foreach ($paymentDetails as $key => $detail) {
+            $payment_method = PaymentMethod::where('payment_method_code', $detail['payment_method'])->first();
+            $debet=0;
+            $credit =$detail['payment_nominal'];
+            if($detail['payment_nominal']<0){
+                $credit = 0;
+                $debet = abs($detail['payment_nominal']);
+            }
+
+            if($payment_method){
+                //Payment Method
+                Journal::create([
+                    'document_number' => $payable_payment_number,
+                    'document_date' => $payable_payment_date,
+                    'account_number' => $payment_method->account_number,
+                    'notes' => $supplier->supplier_name.' Pelunasan hutang',
+                    'debet_nominal' => $debet,
+                    'credit_nominal' => $credit,
+                    'company_code' => $company_code,
+                    'department_code' => $department_code,
+                    'created_by' => $currentUser,
+                    'updated_by' => $currentUser,
+                ]);
+            }
+        }
+
+        //DISC
+        $debetD=0;
+        $creditD =$total_discount;
+        if($total_discount<0){
+            $debetD = abs($total_discount);
+            $creditD = 0;
+        }
+
+        if ($total_discount != 0) {
+            Journal::create([
+                'document_number' => $payable_payment_number,
+                'document_date' => $payable_payment_date,
+                'account_number' => $request->acc_disc,
+                'notes' => $supplier->supplier_name.' Pelunasan hutang',
+                'debet_nominal' =>$debetD,
+                'credit_nominal' => $creditD,
+                'company_code' => $company_code,
+                'department_code' => $department_code,
+                'created_by' => $currentUser,
+                'updated_by' => $currentUser,
+            ]);
+        }
+
+        //Hutang  / Payable
+        $debet=$total_nominal;
+        $credit =0;
+        if($total_nominal<0){
+            $credit = abs($total_nominal);
+            $debet = 0;
+        }
+
+        Journal::create([
+            'document_number' => $payable_payment_number,
+            'document_date' => $payable_payment_date,
+            'account_number' => $supplier->account_payable,
+            'notes' => $supplier->supplier_name.' Pelunasan hutang',
+            'debet_nominal' => $debet,
+            'credit_nominal' => $credit,
+            'company_code' => $company_code,
+            'department_code' => $department_code,
+            'created_by' => $currentUser,
+            'updated_by' => $currentUser,
+        ]);
     }
 
     public function store(Request $request)
@@ -202,7 +265,7 @@ class PayablePaymentController extends Controller
             $company = Company::first();
             $company_code = $company->company_code;
             $department_code = $request->department_code;
-            $payable_payment_number = $this->generatePayablePaymentNumber($company_code, $department_code);
+            $payable_payment_number = $this->generatePayablePaymentNumber($request->document_date);
             $payable_payment_date = $request->document_date;
             $supplier_code = $request->supplier_code;
             $supplier = Supplier::where('supplier_code', $request->supplier_code)->first();
@@ -226,34 +289,6 @@ class PayablePaymentController extends Controller
                 'updated_by' => $currentUser,
             ]);
 
-            if ($total_discount > 0) {
-                Journal::create([
-                    'document_number' => $payable_payment_number,
-                    'document_date' => $payable_payment_date,
-                    'account_number' => $request->acc_disc,
-                    'notes' => 'Discount on payment for ' . $payable_payment_number,
-                    'debet_nominal' => 0,
-                    'credit_nominal' => $total_discount,
-                    'company_code' => $company_code,
-                    'department_code' => $department_code,
-                    'created_by' => $currentUser,
-                    'updated_by' => $currentUser,
-                ]);
-            }
-
-            Journal::create([
-                'document_number' => $payable_payment_number,
-                'document_date' => $payable_payment_date,
-                'account_number' => $supplier->account_payable,
-                'notes' => 'Total payment for ' . $payable_payment_number,
-                'debet_nominal' => $total_nominal ,
-                'credit_nominal' => 0,
-                'company_code' => $company_code,
-                'department_code' => $department_code,
-                'created_by' => $currentUser,
-                'updated_by' => $currentUser,
-            ]);
-
             $id = PayablePayment::where('payable_payment_number', $payable_payment_number)->select('id')->first()->id;
 
             DB::commit();
@@ -270,14 +305,12 @@ class PayablePaymentController extends Controller
         $payable = PayablePayment::findOrFail($id);
         $payable_details = PayablePaymentDetail::where('payable_payment_number', $payable->payable_payment_number)->get();
         $payable_detail_pays = PayablePaymentDetailPay::where('payable_payment_number', $payable->payable_payment_number)->get();
-        $purchaseInvoices = PurchaseInvoice::where('supplier_code',$payable->supplier_code)->with('debts')->whereHas('debts', function ($query) {
-            $query->where('debt_balance', '>', 0);
-        })->get();
+        $debts = Debt::where('supplier_code',$payable->supplier_code)->whereRaw('FLOOR(debt_balance) != 0')->orderBy('document_date','asc')->get();
         $departments = Department::where('department_code', $payable->department_code)->first();
         $paymentMethods = PaymentMethod::orderBy('id', 'asc')->get();
-        $coas = Coa::orderBy('id', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['payable_payment'];
-        return view('transaction.payable-payment.edit', compact('payable', 'payable_details', 'payable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','purchaseInvoices'));
+        return view('transaction.payable-payment.edit', compact('payable', 'payable_details', 'payable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','debts'));
     }
 
     public function update(Request $request, $id)
@@ -321,35 +354,7 @@ class PayablePaymentController extends Controller
                 'updated_by' => $currentUser,
             ]);
 
-            // Create journal entries for discounts
-            if ($total_discount > 0) {
-                Journal::create([
-                    'document_number' => $payable_payment_number,
-                    'document_date' => $payable_payment_date,
-                    'account_number' => $request->acc_disc,
-                    'notes' => 'Discount on payment for ' . $payable_payment_number,
-                    'debet_nominal' => 0,
-                    'credit_nominal' => $total_discount,
-                    'company_code' => $company_code,
-                    'department_code' => $department_code,
-                    'created_by' => $currentUser,
-                    'updated_by' => $currentUser,
-                ]);
-            }
 
-            // Create journal entry for total payment
-            Journal::create([
-                'document_number' => $payable_payment_number,
-                'document_date' => $payable_payment_date,
-                'account_number' => $supplier->account_payable,
-                'notes' => 'Total payment for ' . $payable_payment_number,
-                'debet_nominal' => $total_nominal ,
-                'credit_nominal' => 0,
-                'company_code' => $company_code,
-                'department_code' => $department_code,
-                'created_by' => $currentUser,
-                'updated_by' => $currentUser,
-            ]);
 
             DB::commit();
             return redirect()->route('transaction.payable_payment')->with('success', 'Payable Payment updated successfully!');

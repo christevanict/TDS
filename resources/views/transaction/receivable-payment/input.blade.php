@@ -142,6 +142,7 @@ table {
                 <div class="card-header">Detail {{__('Receivable Payment')}}</div>
                 <div class="card-body">
                     <h5 class="text-end">Total Pembayaran: <span id="total-value">0</span></h5>
+                    <h5 class="text-end">Total Pembayaran Setelah Diskon: <span id="total-value-after-discount"></span></h5>
                     <table class="table" id="dynamicTable">
                         <thead>
                             <td>Nomor Dokumen</td>
@@ -212,14 +213,14 @@ table {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($salesInvoices as $si)
-                                    <tr data-customer={{$si->customers->group_customer}}>
+                                    @foreach ($receivables as $si)
+                                    <tr data-customer={{$si->customer_code}}>
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $si->receivables }}" data-document-date="{{ $si->document_date }}" value="{{ $si->sales_invoice_number }}">
+                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $si }}" data-document-date="{{ $si->document_date }}" value="{{ $si->document_number }}">
                                         </td>
-                                        <td>{{ $si->sales_invoice_number }}</td>
+                                        <td>{{ $si->document_number }}</td>
                                         <td>{{ $si->document_date }}</td>
-                                        <td>Rp {{ number_format($si->receivables->debt_balance,0,'.',',')}}</td>
+                                        <td>Rp {{ number_format($si->debt_balance,0,'.',',')}}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -361,6 +362,7 @@ let customerId='';
 
     const customers = @json($customers);
 
+    let activeIndexCust = -1;
     document.getElementById('search').addEventListener('input', function () {
         let query = this.value.toLowerCase();
         let resultsContainer = document.getElementById('search-results');
@@ -408,35 +410,55 @@ let customerId='';
         }
     });
 
-    function calculateTotals() {
-        let total = 0;
-        document.querySelectorAll('.nominal').forEach(function (input) {
+    // Keydown event listener for navigation
+    document.getElementById('search').addEventListener('keydown', function (e) {
+        const resultsContainer = document.getElementById('search-results');
+        const items = resultsContainer.querySelectorAll('.list-group-item');
+        if (items.length === 0) return;
 
-            input.value = input.value.replace(/,/g, ''); // Remove any thousand separators
-            if(input.id=='disc_nominal'){
-                total -= parseFloat(input.value) || 0;
-            }else{
-                total += parseFloat(input.value) || 0;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (activeIndexCust < items.length - 1) {
+                activeIndexCust++;
+                updateActiveCustomer(items);
             }
-            const cursorPosition = input.selectionStart;
-            let value = input.value.replace(/,/g, '');
-            // Format the number with thousand separators
-            let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (activeIndexCust > -1) {
+                activeIndexCust--;
+                updateActiveCustomer(items);
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndexCust >= 0 && items[activeIndexCust]) {
+                items[activeIndexCust].click(); // Trigger click event
+            }
+        }
+    });
 
-            // Set the new value
-            input.value = formattedValue;
-
-            // Adjust the cursor position
-            const newCursorPosition = formattedValue.length - (value.length - cursorPosition);
-            input.setSelectionRange(newCursorPosition, newCursorPosition);
+    // Helper function to update active customer
+    function updateActiveCustomer(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === activeIndexCust);
         });
-        let strTotal = (total)+"";
-        let value2 = strTotal.replace(/,/g, '');
-            // Format the number with thousand separators
-        let formattedValue2 = value2.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        document.getElementById('total-value').innerText = formattedValue2;
+        if (activeIndexCust >= 0 && items[activeIndexCust]) {
+            items[activeIndexCust].scrollIntoView({ block: 'nearest' });
+        }
+    }
 
-        return { total }; // Return totals for validation
+    function calculateTotals() {
+        let totalNominalPayment = 0;
+        let totalDiscount = 0;
+        document.querySelectorAll('#parentTbody tr').forEach(function (row, index) {
+            const nominalPayment = parseFloat(document.getElementById(`nominal_payment_${index}`).value.replace(/,/g, '')) || 0;
+            const discount = parseFloat(document.getElementById(`discount_${index}`).value.replace(/,/g, '')) || 0;
+            totalNominalPayment += nominalPayment;
+            totalDiscount += discount;
+        });
+        const formattedTotal = totalNominalPayment.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotalAfterDiscount = (totalNominalPayment - totalDiscount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        document.getElementById('total-value').innerText = formattedTotal;
+        document.getElementById('total-value-after-discount').innerText = formattedTotalAfterDiscount;
     }
     calculateTotals();
 
@@ -754,7 +776,7 @@ let customerId='';
                     isValid = false; // Set flag to false if BG Check Number is not filled
                     Swal.fire({
                         title: 'Error!',
-                        text: `BG Check Number must be filled when using payment method "${paymentMethod}".`,
+                        text: `BG Check Number harus diisi ketika menggunakan payment method "${paymentMethod}".`,
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });
@@ -768,7 +790,7 @@ let customerId='';
                     isValid = false; // Set flag to false if duplicate payment method found
                     Swal.fire({
                         title: 'Error!',
-                        text: `Payment Method "${paymentMethod}" is selected multiple times`,
+                        text: `Harap pilih Payment Method "${paymentMethod}" hanya sekali.`,
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });
@@ -789,35 +811,23 @@ let customerId='';
                 isValid = false;
                 Swal.fire({
                     title: 'Error!',
-                    text: `Account Discount not selected yet`,
+                    text: `Akun diskon belum dipilih`,
                     icon: 'warning',
                     confirmButtonText: 'OK'
                 });
             }
-            const nominalPayment = parseFloat(document.getElementById('total-value')) || 0;
-            let sumPaymentDetails = parseFloat(document.getElementById('total-payment-value')) || 0;
 
-            // Check if the nominal payment matches the sum of payment details
-            if (nominalPayment !== sumPaymentDetails) {
-                isValid = false; // Set flag to false if there's a mismatch
-                Swal.fire({
-                    title: 'Error!',
-                    text: `Nominal Payment for row ${index + 1} must be equal to the sum of Payment Details.`,
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-                return false; // Break the loop
-            }
 
             // Check if the discount is filled and account disc is selected
         });
+        const nominalPayment = parseFloat(document.getElementById('total-payment-value').innerText.replace(/,/g, '')) || 0;
+        let sumPaymentDetails = parseFloat(document.getElementById('total-value-after-discount').innerText.replace(/,/g, '')) || 0;
 
-        // If account disc is required but not selected, show an error
-        if (!accountDiscSelected) {
+        if (nominalPayment!=sumPaymentDetails) {
             isValid = false; // Set flag to false
             Swal.fire({
                 title: 'Error!',
-                text: 'Please select an Account Disc when a discount is filled.',
+                text: 'Jumlah pembayaran belum sama dengan total pembayaran setelah diskon',
                 icon: 'error',
                 confirmButtonText: 'OK'
             });

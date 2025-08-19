@@ -18,7 +18,7 @@ class ItemCategoryController extends Controller
     public function index()
     {
         $itemCategories = ItemCategory::orderBy('item_category_code','asc')->get();
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $companies = Company::orderBy('company_code','asc')->get();
         $user = Users::where('username',Auth::user()->username)->with('roles')->first();
         $privileges = $user->roles->privileges['master_item'];

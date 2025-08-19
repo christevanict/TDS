@@ -25,10 +25,9 @@
 					<table id="example" class="table table-hover table-bordered" style="width:100%">
 						<thead>
 							<tr>
+                                <th>No</th>
 								<th>Depreciation Code</th>
 								<th>Depreciation Name</th>
-								<th>Company</th>
-                                <th>Department</th>
 								<th>Action</th>
 							</tr>
 						</thead>
@@ -36,21 +35,16 @@
                             @foreach ($depreciations as $depreciation)
                                 <tr class='clickable-row' data-bs-toggle="modal" data-bs-target="#modalInput"  onclick="editCategory(
                                     '{{ addslashes($depreciation->depreciation_code ?? '') }}',
-                                    '{{ addslashes($depreciation->depreciation_name ?? '') }}',
-                                    '{{ addslashes($depreciation->company_code ?? '') }}',
-                                    '{{ addslashes($depreciation->department_code ?? '') }}'
+                                    '{{ addslashes($depreciation->depreciation_name ?? '') }}'
                                 )">
+                                    <td>{{$loop->iteration}}</td>
                                     <td>{{$depreciation->depreciation_code}}</td>
                                     <td>{{$depreciation->depreciation_name}}</td>
-                                    <td>{{$depreciation->company ? $depreciation->company->company_name:''}}</td>
-                                    <td>{{$depreciation->department ? $depreciation->department->department_name:''}}</td>
                                     <td>
 
                                     <button class="btn btn-sm btn-warning" onclick="editCategory(
                                     '{{ addslashes($depreciation->depreciation_code ?? '') }}',
-                                    '{{ addslashes($depreciation->depreciation_name ?? '') }}',
-                                    '{{ addslashes($depreciation->company_code ?? '') }}',
-                                    '{{ addslashes($depreciation->department_code ?? '') }}'
+                                    '{{ addslashes($depreciation->depreciation_name ?? '') }}'
                                         )"><i class="material-icons-outlined">edit</i></button>
                                         <form id="delete-form-{{ $depreciation->depreciation_code}}" action="{{ url('/TDS/master/depreciation/delete/' . $depreciation->depreciation_code) }}" method="POST" style="display:inline;">
                                             @csrf
@@ -64,10 +58,9 @@
 
 						<tfoot>
 							<tr>
+                                <th>No</th>
 								<th>Depreciation Code</th>
 								<th>Depreciation Name</th>
-								<th>Company</th>
-                                <th>Department</th>
 								<th>Action</th>
 							</tr>
 						</tfoot>
@@ -93,22 +86,6 @@
                     <label for="exampleInputEmail1" class="form-label">Depreciation Name</label>
                     <div class="input-group mb-3">
                         <input type="text" id="depreciation_name" name="depreciation_name" class="form-control" placeholder="Depreciation Name " aria-label="depreciation_name" aria-describedby="basic-addon1">
-                    </div>
-                    <label for="exampleInputEmail1" class="form-label">Company</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="company_code" name="company_code">
-                            @foreach ($companies as $company)
-                                <option value={{$company->company_code}}>{{$company->company_code.' '.$company->company_name}}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <label for="exampleInputEmail1" class="form-label">Department</label>
-                    <div class="input-group mb-3">
-                        <select class="form-select" id="department_code" name="department_code">
-                            @foreach ($departments as $department)
-                                <option value={{$department->department_code}}>{{$department->department_code.' '.$department->department_name}}</option>
-                            @endforeach
-                        </select>
                     </div>
                     <button id="btn-action" name="btn-action" type="submit" class="btn btn-primary btn-md">Insert</button>
                     <button type="button" class="btn btn-danger" id="cancelButton" style="display:none;" data-bs-dismiss="modal" onclick="cancelEdit()">Cancel</button>
@@ -181,9 +158,8 @@
 
         function cancelEdit() {
             document.getElementById('depreciation_code').value = '';
+            document.getElementById('depreciation_code').readOnly = false;
             document.getElementById('depreciation_name').value = '';
-            document.getElementById('company_code').value = '';
-            document.getElementById('department_code').value = '';
             document.getElementById('legendForm').innerText = 'Depreciation Insert';
             document.getElementById('cancelButton').style.display = 'none';
             document.getElementById('btn-action').innerText = 'Insert';
@@ -192,10 +168,9 @@
 
 
         function editCategory(depreciation_code,depreciation_name,company_code, department_code) {
+            document.getElementById('depreciation_code').readOnly = true;
             document.getElementById('depreciation_code').value = depreciation_code;
             document.getElementById('depreciation_name').value = depreciation_name;
-            document.getElementById('company_code').value = company_code;
-            document.getElementById('department_code').value = department_code;
             document.getElementById('legendForm').innerText = 'Depreciation Update';
             document.getElementById('cancelButton').style.display = 'inline-block';
             document.getElementById('btn-action').innerText = 'Edit';

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('asset_type_code');
             $table->string('asset_type_name');
+            $table->string('depreciation_code');
             $table->integer('economic_life');
             $table->decimal('tariff_depreciation',20,2);
             $table->string('acc_number_asset');
@@ -42,6 +43,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('location');
+        Schema::dropIfExists('asset_type');
     }
 };

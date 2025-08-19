@@ -52,10 +52,9 @@ th.sortable.desc::after {
                     <input type="hidden" name="token" id="token" value="{{$token}}">
                     <div class="row">
                         <div class="col-md-4">
-
                                 <div class="form-group">
                                     <label for="search">{{__('Search Customer')}}</label>
-                                    <input type="text" id="search" class="form-control" placeholder="Search by Customer Code, Name, or Address">
+                                    <input type="text" id="search" class="form-control" placeholder="Search by Customer Code, Name, or Address" autocomplete="off">
                                     <div id="search-results" class="list-group" style="display:none; position:relative; z-index:1000; width:100%;">
                                         <!-- Search results will be injected here -->
                                     </div>
@@ -886,7 +885,7 @@ function calculateTotals() {
                     listItem.innerHTML = `
                         <strong>${customer.customer_code}</strong> -
                         ${customer.customer_name} <br>
-                        <small>${customer.address} - ${customer.city}</small>`;
+                        <small>${customer.address??''} - ${customer.city??''}</small>`;
                     listItem.addEventListener('click', function (e) {
                         e.preventDefault();
                         selectCustomer(customer);
@@ -1009,7 +1008,7 @@ function calculateTotals() {
             <td>
                 <div class="input-group">
                     <input type="hidden" id="item_code_${rowCount}" class="form-control item-input" name="details[${rowCount}][item_id]" placeholder="{{__('Search Item')}}">
-                    <input type="text" class="form-control item-input" name="details[${rowCount}][item_name]" id="item-search-${rowCount}" placeholder="{{__('Search Item')}}">
+                    <input type="text" class="form-control item-input" name="details[${rowCount}][item_name]" id="item-search-${rowCount}" placeholder="{{__('Search Item')}}" autocomplete="off">
                     <div id="item-search-results-${rowCount}" class="list-group" style="display:none; position:relative; z-index:1000; width:100%;">
                         <!-- Search results will be injected here -->
                     </div>

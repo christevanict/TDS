@@ -104,7 +104,7 @@ table {
                             <input type="hidden" name="department_code" id="department_code" class="form-control" readonly value="{{ $departments->department_code }}" required>
                             <div class="form-group">
                                 <label for="document_date">Tanggal {{__('Payable Payment')}}</label>
-                                <input type="date" name="document_date" class="form-control date-picker" readonly value="{{ $payable->payable_payment_date }}">
+                                <input type="date" id="document_date" name="document_date" class="form-control date-picker" readonly value="{{ $payable->payable_payment_date }}">
                             </div>
                             <br>
                             <div class="form-group">
@@ -134,6 +134,7 @@ table {
                 <div class="card-header">Detail {{__('Payable Payment')}}</div>
                 <div class="card-body">
                     <h5 class="text-end">Total Pembayaran: <span id="total-value">{{ number_format($payable->total_debt, 0, '.', ',') }}</span></h5>
+                    <h5 class="text-end">Total Pembayaran Setelah Diskon: <span id="total-value-after-discount">{{ number_format($payable->total_debt, 0, '.', ',') }}</span></h5>
                     <table class="table" id="dynamicTable">
                         <thead>
                             <tr>
@@ -229,14 +230,14 @@ table {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($purchaseInvoices as $pi)
+                                    @foreach ($debts as $pi)
                                     <tr data-supplier="{{ $pi->supplier_code }}">
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $pi->debts->debt_balance }}" data-document-date="{{ $pi->document_date }}" value="{{ $pi->purchase_invoice_number }}">
+                                            <input type="checkbox" class="invoice-checkbox" data-debt-balance="{{ $pi }}" data-document-date="{{ $pi->document_date }}" value="{{ $pi->document_number }}">
                                         </td>
-                                        <td>{{ $pi->purchase_invoice_number }}</td>
+                                        <td>{{ $pi->document_number }}</td>
                                         <td>{{ $pi->document_date }}</td>
-                                        <td>Rp {{ number_format($pi->debts->debt_balance, 0, '.', ',') }}</td>
+                                        <td>Rp {{ number_format($pi->debt_balance, 0, '.', ',') }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -336,13 +337,6 @@ table {
 
     setupSearch('search-acc-disc', 'search-result-acc-disc', 'acc_disc');
 
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('#search')) {
-            document.getElementById('search-results').style.display = 'none';
-            document.getElementById('search').value = '';
-        }
-    });
-
     function formatNumber(input) {
         const cursorPosition = input.selectionStart;
         input.value = input.value.replace(/[^0-9]/g, '');
@@ -354,18 +348,21 @@ table {
     }
 
     function calculateTotals() {
-        let total = 0;
-        document.querySelectorAll('.nominal').forEach(function (input) {
-            input.value = input.value.replace(/,/g, '');
-            total += parseFloat(input.value) || 0;
-            let value = input.value.replace(/,/g, '');
-            let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            input.value = formattedValue;
+        let totalNominalPayment = 0;
+        let totalDiscount = 0;
+        document.querySelectorAll('#parentTbody tr').forEach(function (row, index) {
+            const nominalPayment = parseFloat(document.getElementById(`nominal_payment_${index}`).value.replace(/,/g, '')) || 0;
+            const discount = parseFloat(document.getElementById(`discount_${index}`).value.replace(/,/g, '')) || 0;
+            totalNominalPayment += nominalPayment;
+            totalDiscount += discount;
         });
-        let formattedTotal = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotal = totalNominalPayment.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const formattedTotalAfterDiscount = (totalNominalPayment - totalDiscount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         document.getElementById('total-value').innerText = formattedTotal;
-        return total;
+        document.getElementById('total-value-after-discount').innerText = formattedTotalAfterDiscount;
     }
+
+    calculateTotals();
 
     function updateNominalValue(row) {
         const balance = parseFloat(document.getElementById(`balance_${row}`).value.replace(/,/g, '')) || 0;
@@ -418,6 +415,63 @@ table {
     });
 
     const details = @json($payable_detail_pays);
+    function initDataPayment(){
+        const detailsBody = $(this).find('.details-body');
+        detailsBody.empty();
+
+        function groupAndSum(data) {
+            const grouped = data.reduce((acc, { payment_method, payment_nominal, bg_check_number }) => {
+                const key = `${payment_method}-${bg_check_number || 'NO_BG'}`;
+                if (!acc[key]) {
+                    acc[key] = { payment_method, bg_check_number, total_nominal: 0 };
+                }
+                acc[key].total_nominal += parseFloat(payment_nominal);
+                return acc;
+            }, {});
+            return Object.values(grouped);
+        }
+
+        const groupedData = groupAndSum(details);
+        const detailsArray = [];
+        let total = 0;
+
+        groupedData.forEach((detail, index) => {
+            total+= detail.total_nominal;
+            const detailRow = `
+                <tr>
+                    <td>
+                        <select class="form-control" name="payment_details[${index}][payment_method]">
+                            @foreach ($paymentMethods as $method)
+                                <option value="{{ $method->payment_method_code }}" ${detail.payment_method === '{{ $method->payment_method_code }}' ? 'selected' : ''}>
+                                    {{ $method->payment_name }} ({{ $method->payment_method_code }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td><input type="text" oninput="formatNumber(this)" class="form-control" name="payment_details[${index}][payment_nominal]" value="${detail.total_nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" /></td>
+                    <td><input type="number" placeholder="BG Check Number" class="form-control" name="payment_details[${index}][bg_check_number]" value="${detail.bg_check_number || ''}" /></td>
+                    <td><button class="btn btn-danger deleteDetail"><i class="material-icons-outlined remove-row">remove</i></button></td>
+                </tr>
+            `;
+            const detail2 = {
+                payment_method: detail.payment_method,
+                payment_nominal: detail.total_nominal,
+                bg_check_number: detail.bg_check_number,
+            };
+
+            const hiddenInput = `
+                <input type="hidden" name="payment_details[${index}][payment]" value='${JSON.stringify(detail2)}' />
+            `;
+            document.getElementById('total-payment-value').innerText = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            $(`#pay-row`).append(hiddenInput);
+
+            detailsBody.append(detailRow);
+        });
+    }
+
+    initDataPayment();
+
     const paymentMethods = @json($paymentMethods);
 
     $('#detailsModal').on('show.bs.modal', function () {
@@ -483,7 +537,7 @@ table {
         $('#invoiceTable .invoice-checkbox:checked').each(function() {
             const invoiceNumber = $(this).val();
             const documentDate = $(this).data('document-date').substring(0, 10);
-            const debtBalance = $(this).data('debt-balance').toString().split('.')[0];
+            const debtBalance = $(this).data('debt-balance').debt_balance.toString().split('.')[0];
 
             selectedInvoices.push({
                 invoiceNumber: invoiceNumber,
@@ -579,6 +633,7 @@ table {
     });
 
     document.getElementById('payable-payment-form').addEventListener('submit', function(event) {
+        event.preventDefault();
         let isValid = true;
         const detailsJson = $(this).find(`input[id="payment_details"]`).val();
         const existingDetails = detailsJson ? JSON.parse(detailsJson) : [];
@@ -639,9 +694,83 @@ table {
             });
         }
 
+        const nominalPayment = parseFloat(document.getElementById('total-payment-value').innerText.replace(/,/g, '')) || 0;
+        let sumPaymentDetails = parseFloat(document.getElementById('total-value-after-discount').innerText.replace(/,/g, '')) || 0;
+
+        if (nominalPayment!=sumPaymentDetails) {
+            isValid = false; // Set flag to false
+            Swal.fire({
+                title: 'Error!',
+                text: 'Jumlah pembayaran belum sama dengan total pembayaran setelah diskon',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Validate credit note inputs
+        $('#creditTable .invoice-checkbox:checked').each(function() {
+            let $row = $(this).closest('tr');
+            let nominalInput = $row.find('input[name*="[nominal]"]');
+            let nominalValue = parseFloat(nominalInput.val().replace(/[^0-9.-]+/g, '')) || 0;
+            let debtBalanceText = $row.find('td:nth-child(4)').text().replace(/[^0-9.-]+/g, '');
+            let debtBalance = parseFloat(debtBalanceText) || 0;
+
+            // Validation 1: Check if nominal is empty
+            if (!nominalInput.val() || nominalValue === 0) {
+                isValid = false;
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Oops...',
+                    text: 'Nominal harus diisi untuk nota kredit yang dipilih: ' + $row.find('td:nth-child(2)').text(),
+                });
+                return false;
+            }
+
+            // Validation 2: Check if nominal exceeds debt_balance
+            if (nominalValue > debtBalance) {
+                isValid = false;
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Oops...',
+                    text: 'Nominal untuk nota kredit ' + $row.find('td:nth-child(2)').text() + ' melebihi sisa nota kredit (' + debtBalance.toLocaleString('id-ID') + ').',
+                });
+                return false;
+            }
+        });
 
         if (!isValid) {
             event.preventDefault();
+        }else{
+            const documentDate = document.getElementById('document_date').value;
+            $.ajax({
+                url: '{{ route("checkDateToPeriode") }}',
+                type: 'POST',
+                data: {
+                    date: documentDate,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response != true) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Date',
+                            text: 'Tidak bisa input tanggal pada periode !',
+                        });
+                        return; // Stop further execution
+                    }
+
+                    // All validations passed, submit form
+                    document.getElementById('payable-payment-form').submit();
+                },
+                error: function(xhr) {
+                    console.log(xhr);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to validate date. Please try again.',
+                    });
+                }
+            });
         }
     });
 </script>

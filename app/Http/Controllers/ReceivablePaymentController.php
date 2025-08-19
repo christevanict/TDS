@@ -63,13 +63,13 @@ class ReceivablePaymentController extends Controller
         $departments = Department::where('department_code', 'DP01')->first();
         $paymentMethods = PaymentMethod::orderBy('id', 'asc')->get();
         $customers = Customer::orderBy('id', 'asc')->whereHas('hasGroup')->get();
-        $salesInvoices = SalesInvoice::with('receivables')->where('status', 'Open')->whereHas('receivables', function ($query) {
-            $query->where('debt_balance', '>', 0);
-        })->get();
+        $receivables = Receivable::whereRaw('FLOOR(debt_balance) != 0')
+            ->orderBy('document_date','asc')
+            ->get();
         $token = Str::random(16);
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['receivable_payment'];
-        return view('transaction.receivable-payment.input', compact('departments', 'paymentMethods', 'customers', 'coas', 'salesInvoices', 'privileges', 'token'));
+        return view('transaction.receivable-payment.input', compact('departments', 'paymentMethods', 'customers', 'coas', 'receivables', 'privileges', 'token'));
     }
 
     public function store(Request $request)
@@ -104,7 +104,7 @@ class ReceivablePaymentController extends Controller
             }
 
             $details = $request->details;
-            $result = $this->saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser);
+            $result = $this->saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser,$request->acc_disc);
             $total_nominal = $result['total_nominal'];
             $total_discount = $result['total_discount'];
 
@@ -115,34 +115,6 @@ class ReceivablePaymentController extends Controller
                 'total_debt' => $total_nominal,
                 'acc_disc' => $request->acc_disc,
                 'token' => $request->token,
-                'company_code' => $company_code,
-                'department_code' => $department_code,
-                'created_by' => $currentUser,
-                'updated_by' => $currentUser,
-            ]);
-
-            if ($total_discount > 0) {
-                Journal::create([
-                    'document_number' => $receivable_payment_number,
-                    'document_date' => $receivable_payment_date,
-                    'account_number' => $request->acc_disc,
-                    'notes' => 'Discount on payment for ' . $receivable_payment_number,
-                    'debet_nominal' => $total_discount,
-                    'credit_nominal' => 0,
-                    'company_code' => $company_code,
-                    'department_code' => $department_code,
-                    'created_by' => $currentUser,
-                    'updated_by' => $currentUser,
-                ]);
-            }
-
-            Journal::create([
-                'document_number' => $receivable_payment_number,
-                'document_date' => $receivable_payment_date,
-                'account_number' => $customer->account_receivable,
-                'notes' => 'Total payment for ' . $receivable_payment_number,
-                'debet_nominal' => 0,
-                'credit_nominal' => $total_nominal,
                 'company_code' => $company_code,
                 'department_code' => $department_code,
                 'created_by' => $currentUser,
@@ -161,7 +133,7 @@ class ReceivablePaymentController extends Controller
         }
     }
 
-    private function saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser)
+    private function saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser,$accDisc)
     {
         $total_nominal = 0;
         $total_discount = 0;
@@ -261,23 +233,76 @@ class ReceivablePaymentController extends Controller
                             'created_by' => $currentUser,
                             'updated_by' => $currentUser,
                         ]);
-
-                        Journal::create([
-                            'document_number' => $receivable_payment_number,
-                            'document_date' => $receivable_payment_date,
-                            'account_number' => $payment_method->account_number,
-                            'notes' => 'Payment for ' . $invoice['document_number'] . ' by ' . $payment_method->payment_name,
-                            'debet_nominal' => $amount_to_apply,
-                            'credit_nominal' => 0,
-                            'company_code' => $company_code,
-                            'department_code' => $department_code,
-                            'created_by' => $currentUser,
-                            'updated_by' => $currentUser,
-                        ]);
                     }
                 }
             }
         }
+
+        $customer = Customer::where('customer_code', $customer_code)->first();
+
+        foreach ($paymentDetails as $detail) {
+            $payment_method = PaymentMethod::where('payment_method_code', $detail['payment_method'])->first();
+            $debet=$detail['payment_nominal'];
+            $credit =0;
+            if($detail['payment_nominal']<0){
+                $debet = 0;
+                $credit = abs($detail['payment_nominal']);
+            }
+            Journal::create([
+                'document_number' => $receivable_payment_number,
+                'document_date' => $receivable_payment_date,
+                'account_number' => $payment_method->account_number,
+                'notes' => $customer->customer_name.' Pelunasan piutang',
+                'debet_nominal' => $debet,
+                'credit_nominal' => $credit,
+                'company_code' => $company_code,
+                'department_code' => $department_code,
+                'created_by' => $currentUser,
+                'updated_by' => $currentUser,
+            ]);
+        }
+
+        //discount
+        $debetD=$total_discount;
+        $creditD =0;
+        if($total_discount<0){
+            $creditD = abs($total_discount);
+            $debetD = 0;
+        }
+        if ($total_discount != 0) {
+            Journal::create([
+                'document_number' => $receivable_payment_number,
+                'document_date' => $receivable_payment_date,
+                'account_number' => $accDisc,
+                'notes' => $customer->customer_name.' Pelunasan piutang',
+                'debet_nominal' => $debetD,
+                'credit_nominal' => $creditD,
+                'company_code' => $company_code,
+                'department_code' => $department_code,
+                'created_by' => $currentUser,
+                'updated_by' => $currentUser,
+            ]);
+        }
+
+        //receivable
+        $debet=0;
+        $credit =$total_nominal;
+        if($total_nominal<0){
+            $credit = 0;
+            $debet = abs($total_nominal);
+        }
+        Journal::create([
+            'document_number' => $receivable_payment_number,
+            'document_date' => $receivable_payment_date,
+            'account_number' => $customer->account_receivable,
+            'notes' => $customer->customer_name.' Pelunasan piutang',
+            'debet_nominal' => $debet,
+            'credit_nominal' => $credit,
+            'company_code' => $company_code,
+            'department_code' => $department_code,
+            'created_by' => $currentUser,
+            'updated_by' => $currentUser,
+        ]);
 
         return ['total_nominal' => $total_nominal, 'total_discount' => $total_discount];
     }
@@ -290,10 +315,11 @@ class ReceivablePaymentController extends Controller
         $receivable_detail_pays = ReceivablePaymentDetailPay::where('receivable_payment_number', $receivable->receivable_payment_number)->get();
         $departments = Department::where('department_code', 'DP01')->first();
         $paymentMethods = PaymentMethod::orderBy('id', 'asc')->get();
-        $salesInvoices = SalesInvoice::where('customer_code',$receivable->customer_code)->with('receivables')->where('status', 'Open')->whereHas('receivables', function ($query) {
-            $query->where('debt_balance', '>', 0);
-        })->get();
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $receivables = Receivable::whereRaw('FLOOR(debt_balance) != 0')
+        ->where('customer_code',$receivable->customer_code)
+        ->orderBy('document_date','asc')
+        ->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['receivable_payment'];
         $editable= true;
         $periodeClosed = Periode::where('periode_active', 'closed')
@@ -304,7 +330,7 @@ class ReceivablePaymentController extends Controller
             $editable = false;
         }
 
-        return view('transaction.receivable-payment.edit', compact('receivable', 'receivable_details', 'receivable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','salesInvoices','editable'));
+        return view('transaction.receivable-payment.edit', compact('receivable', 'receivable_details', 'receivable_detail_pays', 'departments', 'paymentMethods', 'coas', 'privileges','receivables','editable'));
     }
 
     public function update(Request $request, $id)
@@ -347,41 +373,13 @@ class ReceivablePaymentController extends Controller
             }
 
             $details = $request->details;
-            $result = $this->saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser);
+            $result = $this->saveDetails($receivable_payment_number, $receivable_payment_date, $customer_code, $details, $paymentDetails, $company_code, $department_code, $currentUser,$request->acc_disc);
             $total_nominal = $result['total_nominal'];
             $total_discount = $result['total_discount'];
 
             $receivablePayment->update([
                 'total_debt' => $total_nominal,
                 'acc_disc' => $request->acc_disc,
-                'updated_by' => $currentUser,
-            ]);
-
-            if ($total_discount > 0) {
-                Journal::create([
-                    'document_number' => $receivable_payment_number,
-                    'document_date' => $receivable_payment_date,
-                    'account_number' => $request->acc_disc,
-                    'notes' => 'Discount on payment for ' . $receivable_payment_number,
-                    'debet_nominal' => $total_discount,
-                    'credit_nominal' => 0,
-                    'company_code' => $company_code,
-                    'department_code' => $department_code,
-                    'created_by' => $currentUser,
-                    'updated_by' => $currentUser,
-                ]);
-            }
-
-            Journal::create([
-                'document_number' => $receivable_payment_number,
-                'document_date' => $receivable_payment_date,
-                'account_number' => $customer->account_receivable,
-                'notes' => 'Total payment for ' . $receivable_payment_number,
-                'debet_nominal' => 0,
-                'credit_nominal' => $total_nominal,
-                'company_code' => $company_code,
-                'department_code' => $department_code,
-                'created_by' => $currentUser,
                 'updated_by' => $currentUser,
             ]);
 

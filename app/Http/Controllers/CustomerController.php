@@ -28,7 +28,7 @@ class CustomerController extends Controller
     public function index()
     {
         $customers = Customer::orderBy('customer_code','asc')->get();
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $companies = Company::orderBy('company_code','asc')->get();
         $currencies = Currency::orderBy('currency_code','asc')->get();
         $groups = GroupCustomer::orderBy('code_group','asc')->get();

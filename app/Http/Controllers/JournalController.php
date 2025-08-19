@@ -36,7 +36,7 @@ class JournalController extends Controller
             ->orderByRaw('CASE WHEN debet_nominal > 0 THEN 0 ELSE 1 END') // Prioritize debet rows first
             ->orderBy('id', 'desc') // Finally, order by id in descending order
             ->get();
-        $coas = COA::all();
+        $coas = Coa::all();
 
         return view('transaction.journal.journal_list', compact('companies', 'departments', 'journals', 'coas'));
     }

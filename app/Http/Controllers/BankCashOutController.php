@@ -23,7 +23,7 @@ class BankCashOutController extends Controller
         $companies = Company::all();
         $departments = Department::where('department_code', 'DP01')->first();
         $bankCashOutRecords = BankCashOut::all();
-        $coas = COA::orderBy('account_number', 'asc')->get();
+        $coas = Coa::orderBy('account_number', 'asc')->get();
         $privileges = Auth::user()->roles->privileges['bank_out'];
         return view('transaction.bank-cash-out.bank_cash_out_list', compact('companies', 'departments', 'bankCashOutRecords', 'coas','privileges'));
     }
@@ -57,7 +57,7 @@ class BankCashOutController extends Controller
     public function create() {
         $companies = Company::all();
         $departments = Department::where('department_code', 'DP01')->first();
-        $coas = COA::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
+        $coas = Coa::whereRelation('coasss','account_sub_type','!=','PM')->orderBy('account_number', 'asc')->get();
         $token = str()->random(16);
         $privileges = Auth::user()->roles->privileges['bank_out'];
         return view('transaction.bank-cash-out.bank_cash_out_input', compact('companies', 'departments', 'coas','privileges','token'));
@@ -73,11 +73,13 @@ class BankCashOutController extends Controller
         try {
             $bank_cash_out_number = $this->generateBankCashOutNumber($request->bank_cash_out_date);
             $totalNominal = 0;
+            $notes = '';
 
             foreach ($request->details as $detail) {
                 if (isset($detail['nominal'])) {
                     $detail['nominal'] = str_replace(',', '', $detail['nominal']??0);
                     $totalNominal += $detail['nominal'];
+                    $notes .=$detail['note'].' | ';
                 }
             }
             if(BankCashOut::where('bank_cash_out_number', $request->bank_cash_out_number)->count() < 1) {
@@ -101,7 +103,7 @@ class BankCashOutController extends Controller
             $journal->account_number = $request->account_number;
             $journal->debet_nominal = 0;
             $journal->credit_nominal = $cashOut->nominal;
-            $journal->notes = $request->note??'';
+            $journal->notes = $notes;
             $journal->company_code = $request->company_code;
             $journal->department_code = $request->department_code;
             $journal->created_by = Auth::user()->username;
@@ -165,12 +167,13 @@ class BankCashOutController extends Controller
             BankCashOutDetail::where('bank_cash_out_number', $bankCashOut->bank_cash_out_number)->delete();
 
             $totalNominal = 0;
-
+            $notes = '';
             if ($request->has('details')) {
                 foreach ($request->details as $detail) {
                     if (isset($detail['nominal'])) {
                         $detail['nominal'] = str_replace(',', '', $detail['nominal']??0);
                         $totalNominal += $detail['nominal'];
+                        $notes .=$detail['note'].' | ';
                     }
                 }
 
@@ -182,7 +185,7 @@ class BankCashOutController extends Controller
                 $journal->account_number = $request->account_number;
                 $journal->debet_nominal = 0;
                 $journal->credit_nominal = $totalNominal;
-                $journal->notes = $request->note;
+                $journal->notes = $notes;
                 $journal->company_code = $request->company_code;
                 $journal->department_code = $request->department_code;
                 $journal->created_by = Auth::user()->username;

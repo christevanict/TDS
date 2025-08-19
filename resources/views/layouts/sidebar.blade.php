@@ -77,7 +77,7 @@
                         </ul>
                         @endif
                         @if(has_access('master_supplier'))
-                        <ul class="d-none">
+                        <ul>
                             <li><a href="/TDS/master/supplier"><i
                                         class="material-icons-outlined">inventory</i>{{__('Supplier')}}</a>
                             </li>
@@ -130,7 +130,7 @@
                         @endif
                         @if(has_access('master_item')||has_access('master_item_sales')||has_access('master_item_purchase'))
                         <li><a class="has-arrow" href="javascript:;"><i
-                                    class="material-icons-outlined">apartment</i>Jasa</a>
+                                    class="material-icons-outlined">dns</i>Jasa</a>
                             @if(has_access('master_item'))
                             <ul>
                                 <li><a href="/TDS/master/item-category"><i
@@ -161,6 +161,26 @@
                             <ul>
                                 <li><a href="/TDS/master/item-sales-price"><i
                                             class="material-icons-outlined">category</i>Daftar Harga Jual Jasa</a>
+                                </li>
+                            </ul>
+                            @endif
+                        <li>
+                        @endif
+                        @if(has_access('master_asset'))
+                        <li><a class="has-arrow" href="javascript:;"><i
+                                    class="material-icons-outlined">diamond</i>Asset</a>
+                            @if(has_access('master_item'))
+                            <ul>
+                                <li><a href="/TDS/master/depreciation"><i
+                                            class="material-icons-outlined">category</i>Depresiasi</a>
+                                </li>
+                            </ul>
+                            <ul>
+                                <li><a href="/TDS/master/asset-type"><i class="material-icons-outlined">category</i>Jenis Asset</a>
+                                </li>
+                            </ul>
+                            <ul>
+                                <li><a href="/TDS/master/asset"><i class="material-icons-outlined">category</i>Asset</a>
                                 </li>
                             </ul>
                             @endif
@@ -462,6 +482,49 @@
                 </li>
             </ul>
             @endif
+            @if(has_access('asset_sales')||has_access('asset_purchase'))
+                <li class="menu-label">Asset</li>
+                @if(has_access('asset_purchase'))
+                    <li>
+                        <a href="javascript:;" class="has-arrow">
+                            <div class="parent-icon"><i class="material-icons-outlined"><span
+                                        class="material-symbols-outlined">
+                                        diamond
+                                    </span></i>
+                            </div>
+                            <div class="menu-title">Pembelian Asset</div>
+                        </a>
+                        <ul>
+                            <li><a href="/TDS/transaction/asset-purchase/create"><i
+                                        class="material-icons-outlined">arrow_right</i>Input Pembelian Asset</a>
+                            </li>
+                            <li><a href="/TDS/transaction/asset-purchase/"><i
+                                        class="material-icons-outlined">arrow_right</i>Daftar Pembelian Asset</a>
+                            </li>
+                        </ul>
+                    </li>
+                @endif
+                @if(has_access('asset_sales'))
+                <li>
+                    <a href="javascript:;" class="has-arrow">
+                        <div class="parent-icon"><i class="material-icons-outlined"><span
+                                    class="material-symbols-outlined">
+                                    diamond
+                                </span></i>
+                        </div>
+                        <div class="menu-title">Penjualan Asset</div>
+                    </a>
+                    <ul>
+                        <li><a href="/TDS/transaction/asset-sales/create"><i
+                                    class="material-icons-outlined">arrow_right</i>Input Penjualan Asset</a>
+                        </li>
+                        <li><a href="/TDS/transaction/asset-sales/"><i
+                                    class="material-icons-outlined">arrow_right</i>Daftar Penjualan Asset</a>
+                        </li>
+                    </ul>
+                </li>
+                @endif
+            @endif
 
         @if(has_access('bank_in')||has_access('bank_out')||has_access('general_journal')||has_access('payable_payment')||has_access('receivable_payment')||has_access('closing'))
         <ul class="metismenu" id="sidenav">
@@ -552,7 +615,7 @@
                 </ul>
             </li>
             @if(has_access('payable_payment'))
-            <li class="d-none">
+            <li>
                 <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon"><i class="material-icons-outlined">payments</i>
                 </div>

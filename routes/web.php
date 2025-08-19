@@ -123,11 +123,26 @@ Route::prefix('TDS')->group(function () {
                     Route::post('/delete/{id}', [App\Http\Controllers\DepreciationMethodController::class, 'delete']);
                 });
 
-                Route::prefix('asset-type')->group(function () {
-                    Route::get('/', [App\Http\Controllers\AssetTypeController::class, 'index']);
-                    Route::post('/insert', [App\Http\Controllers\AssetTypeController::class, 'insert']);
-                    Route::post('/edit/{id}', [App\Http\Controllers\AssetTypeController::class, 'update']);
-                    Route::post('/delete/{id}', [App\Http\Controllers\AssetTypeController::class, 'delete']);
+                Route::middleware(['role:master_asset'])->group(function () {
+                    Route::prefix('depreciation')->group(function () {
+                        Route::get('/', [App\Http\Controllers\DepreciationMethodController::class, 'index']);
+                        Route::post('/insert', [App\Http\Controllers\DepreciationMethodController::class, 'insert']);
+                        Route::post('/edit/{id}', [App\Http\Controllers\DepreciationMethodController::class, 'update']);
+                        Route::post('/delete/{id}', [App\Http\Controllers\DepreciationMethodController::class, 'delete']);
+                    });
+                    Route::prefix('asset-type')->group(function () {
+                        Route::get('/', [App\Http\Controllers\AssetTypeController::class, 'index']);
+                        Route::post('/insert', [App\Http\Controllers\AssetTypeController::class, 'insert']);
+                        Route::post('/edit/{id}', [App\Http\Controllers\AssetTypeController::class, 'update']);
+                        Route::post('/delete/{id}', [App\Http\Controllers\AssetTypeController::class, 'delete']);
+                    });
+                    Route::prefix('asset')->group(function () {
+                        Route::get('/', [App\Http\Controllers\AssetController::class, 'index']);
+                        Route::post('/insert', [App\Http\Controllers\AssetController::class, 'store'])->name('master.assets.insert');
+                        Route::post('/edit/{id}', [App\Http\Controllers\AssetController::class, 'update'])->name('master.assets.update');
+                        Route::post('/delete/{id}', [App\Http\Controllers\AssetController::class, 'destroy'])->name('master.assets.delete');
+                        Route::post('/import', [App\Http\Controllers\AssetController::class, 'importExcel'])->name('master.assets.import');
+                    });
                 });
                 Route::middleware(['role:master_coa'])->group(function () {
                     Route::prefix('coa')->group(function () {
@@ -690,6 +705,28 @@ Route::prefix('TDS')->group(function () {
                     Route::delete('/{id}', [App\Http\Controllers\PurchaseDebtCreditNoteController::class, 'destroy'])
                         ->name('transaction.purchase_debt_credit_notes.destroy');
                 });
+
+                Route::middleware(['role:asset_sales'])->group(function(){
+                    Route::prefix('asset-sales')->group(function(){
+                        Route::get('/', [App\Http\Controllers\AssetSalesController::class, 'index'])->name('asset-sales.index');
+                        Route::get('/create',[App\Http\Controllers\AssetSalesController::class, 'create'])->name('asset-sales.create');
+                        Route::post('/store',[App\Http\Controllers\AssetSalesController::class, 'store'])->name('asset-sales.store');
+                        Route::get('/edit/{id}',[App\Http\Controllers\AssetSalesController::class, 'edit'])->name('asset-sales.edit');
+                        Route::post('/update/{id}',[App\Http\Controllers\AssetSalesController::class, 'update'])->name('asset-sales.update');
+                        Route::post('/delete/{id}',[App\Http\Controllers\AssetSalesController::class, 'destroy'])->name('asset-sales.destroy');
+                    });
+                });
+                Route::middleware(['role:asset_purchase'])->group(function(){
+                    Route::prefix('asset-purchase')->group(function(){
+                        Route::get('/', [App\Http\Controllers\AssetPurchaseController::class, 'index'])->name('asset-purchase.index');
+                        Route::get('/create',[App\Http\Controllers\AssetPurchaseController::class, 'create'])->name('asset-purchase.create');
+                        Route::post('/store',[App\Http\Controllers\AssetPurchaseController::class, 'store'])->name('asset-purchase.store');
+                        Route::get('/edit/{id}',[App\Http\Controllers\AssetPurchaseController::class, 'edit'])->name('asset-purchase.edit');
+                        Route::post('/update/{id}',[App\Http\Controllers\AssetPurchaseController::class, 'update'])->name('asset-purchase.update');
+                        Route::post('/delete/{id}',[App\Http\Controllers\AssetPurchaseController::class, 'destroy'])->name('asset-purchase.destroy');
+                    });
+                });
+
 
         });
         // Route::prefix('pos')->group(function () {

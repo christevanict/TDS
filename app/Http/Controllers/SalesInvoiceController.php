@@ -582,7 +582,7 @@ class SalesInvoiceController extends Controller
             $SIJournalD->account_number = $categories->acc_number_sales??'1001';
             $SIJournalD->debet_nominal = 0;
             $SIJournalD->credit_nominal = $totalPriceBeforeTaxAfterDiscount+$totalDiscountPerDetail;
-            $SIJournalD->notes = 'Sales '.$itemTax->item_name.' : '.$detail['qty'].' '.$itemUnit->units->unit_name ;
+            $SIJournalD->notes = $customers->customer_name. ' - penjualan barang '.$itemTax->item_name.' : '.$detail['qty'];
             $SIJournalD->company_code = $general->company_code;
             $SIJournalD->department_code = $general->department_code;
             $SIJournalD->created_by = Auth::user()->username;
@@ -597,7 +597,7 @@ class SalesInvoiceController extends Controller
             $SIJournalDd->account_number = $categories->acc_number_sales_discount??'1001';
             $SIJournalDd->debet_nominal = $totalDiscountPerDetail;
             $SIJournalDd->credit_nominal = 0;
-            $SIJournalDd->notes = 'Discount on sales '.$itemTax->item_name.' : '.$detail['qty'].' '.$itemUnit->units->unit_name ;
+            $SIJournalDd->notes = $customers->customer_name. ' - diskon penjualan barang '.$itemTax->item_name.' : '.$detail['qty'];
             $SIJournalDd->company_code = $general->company_code;
             $SIJournalDd->department_code = $general->department_code;
             $SIJournalDd->created_by = Auth::user()->username;
@@ -687,7 +687,7 @@ class SalesInvoiceController extends Controller
         $PIJournal->account_number = $customers->account_receivable??'1001';
         $PIJournal->debet_nominal = $general->total;
         $PIJournal->credit_nominal = 0;
-        $PIJournal->notes = 'Sales from '.$customers->customer_name.' ('.$general->sales_invoice_number.')';
+        $PIJournal->notes = $customers->customer_name.' faktur penjualan';
         $PIJournal->company_code = $general->company_code;
         $PIJournal->department_code = $general->department_code;
         $PIJournal->created_by = Auth::user()->username;
@@ -723,7 +723,7 @@ class SalesInvoiceController extends Controller
         $PIJournala->account_number = $customers->account_add_tax??'1001';
         $PIJournala->debet_nominal = 0;
         $PIJournala->credit_nominal = $general->add_tax;
-        $PIJournala->notes = 'Add. Tax on sales for '.$customers->customer_name.' ('.$general->sales_invoice_number.')';
+        $PIJournala->notes = $customers->customer_name.' pajak faktur penjualan';
         $PIJournala->company_code = $general->company_code;
         $PIJournala->department_code = $general->department_code;
         $PIJournala->created_by = Auth::user()->username;
@@ -753,7 +753,7 @@ class SalesInvoiceController extends Controller
             $PIJournala->account_number = $taxes->account_number??'1001';
             $PIJournala->debet_nominal = $general->tax_revenue;
             $PIJournala->credit_nominal = 0;
-            $PIJournala->notes = 'Revenue Tax on sales for '.$customers->customer_name.' ('.$general->sales_invoice_number.')';
+            $PIJournala->notes = $customers->customer_name.' pajak faktur penjualan';
             $PIJournala->company_code = $general->company_code;
             $PIJournala->department_code = $general->department_code;
             $PIJournala->created_by = Auth::user()->username;
