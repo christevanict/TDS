@@ -201,7 +201,7 @@ class GeneralJournalController extends Controller
         DB::beginTransaction();
         try {
             $general = GeneralJournal::findOrFail($id);
-            GeneralJournal::where('general_journal_number', $general->general_journal_number)->delete();
+            Journal::where('document_number', $general->general_journal_number)->delete();
             GeneralJournalDetail::where('general_journal_number', $general->general_journal_number)->delete();
             $general->delete();
 

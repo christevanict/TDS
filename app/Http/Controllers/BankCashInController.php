@@ -235,6 +235,7 @@ class BankCashInController extends Controller
         try {
             $bankCashIn = BankCashIn::findOrFail($id);
             BankCashInDetail::where('bank_cash_in_number', $bankCashIn->bank_cash_in_number)->delete(); // Use bank_cash_in_number for detail linking
+            Journal::where('document_number', $bankCashIn->bank_cash_in_number)->delete(); // Use bank_cash_in_number for detail linking
             $bankCashIn->delete();
 
             DB::commit(); // Commit transaction

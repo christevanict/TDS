@@ -215,6 +215,7 @@ class BankCashOutController extends Controller
         try {
             $bankCashOut = BankCashOut::findOrFail($id);
             BankCashOutDetail::where('bank_cash_out_number', $bankCashOut->bank_cash_out_number)->delete();
+            Journal::where('document_number', $bankCashOut->bank_cash_out_number)->delete();
             $bankCashOut->delete();
 
             DB::commit();
