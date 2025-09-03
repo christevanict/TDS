@@ -122,7 +122,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <input type="text" name="details[{{ $loop->index }}][nominal]" class="form-control text-end nominal" required value="{{ old('details.' . $loop->index . '.nominal', $detail->nominal) }}">
+                                        <input type="text" name="details[{{ $loop->index }}][nominal]" class="form-control text-end nominal" required value="{{ old('details.' . $loop->index . '.nominal', $detail->nominal) }}" oninput="formatNumber(this)">
                                     </td>
                                     <td>
                                         <input type="text" name="details[{{ $loop->index }}][note]" class="form-control"  placeholder="..." value="{{ old('details.' . $loop->index . '.note', $detail->note) }}">
@@ -315,20 +315,45 @@ $('#document_date').prop('max', maxDate);
     addInputListeners();
 
     function formatNumber(input) {
-        // Get the cursor position
         const cursorPosition = input.selectionStart;
-        input.value = input.value.replace(/[^0-9]/g, '');
-        // Remove any existing thousand separators
-        let value = input.value.replace(/,/g, '');
+        const originalValue = input.value;
 
-        // Format the number with thousand separators
-        let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        let value = input.value.replace(/[^0-9.,]/g, '');
 
-        // Set the new value
-        input.value = formattedValue;
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts[1];
+        }
 
-        // Adjust the cursor position
-        const newCursorPosition = formattedValue.length - (value.length - cursorPosition);
+        let [integerPart, decimalPart = ''] = value.split('.');
+
+        integerPart = integerPart.replace(/,/g, '');
+
+        const formattedInteger = integerPart ? Number(integerPart).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }) : '';
+
+        const formattedValue = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+
+        const originalSeparators = (originalValue.slice(0, cursorPosition).match(/,/g) || []).length;
+        const newSeparators = (formattedValue.slice(0, cursorPosition).match(/,/g) || []).length;
+        let newCursorPosition = cursorPosition + (newSeparators - originalSeparators);
+
+        if (originalValue[cursorPosition - 1] === '.' && !formattedValue.includes('.')) {
+            input.value = formattedInteger + '.';
+            newCursorPosition = input.value.length;
+        } else {
+            input.value = formattedValue;
+            if (originalValue[cursorPosition - 1] === '.' && formattedValue.includes('.')) {
+                newCursorPosition = formattedValue.indexOf('.') + 1;
+            }
+        }
+
+        // Ensure cursor position is valid
+        newCursorPosition = Math.min(Math.max(newCursorPosition, 0), input.value.length);
+
+        // Set cursor position
         input.setSelectionRange(newCursorPosition, newCursorPosition);
     }
 
@@ -353,7 +378,7 @@ $('#document_date').prop('max', maxDate);
                     </div>
                 </td>
                 <td>
-                    <input type="text" name="details[${rowCount}][nominal]" class="form-control text-end nominal" required placeholder="Nominal">
+                    <input type="text" name="details[${rowCount}][nominal]" class="form-control text-end nominal" required placeholder="Nominal" oninput="formatNumber(this)">
                 </td>
                 <td>
                     <input type="text" name="details[${rowCount}][note]" class="form-control"  placeholder="...">
