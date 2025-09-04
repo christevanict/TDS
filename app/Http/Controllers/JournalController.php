@@ -84,7 +84,6 @@ class JournalController extends Controller
             ->select(
                 'j.account_number',
                 'c.account_name',
-                'j.notes',
                 'c.normal_balance',
                 DB::raw('SUM(j.debet_nominal) as total_debet'),
                 DB::raw('SUM(j.credit_nominal) as total_credit'),
@@ -107,7 +106,7 @@ class JournalController extends Controller
             $sawalQuery->where('j.account_number', $coaId);
         }
 
-        $sawalData = $sawalQuery->groupBy('j.account_number', 'c.account_name', 'j.notes', 'c.normal_balance')
+        $sawalData = $sawalQuery->groupBy('j.account_number', 'c.account_name', 'c.normal_balance')
             ->get()
             ->keyBy('account_number');
 

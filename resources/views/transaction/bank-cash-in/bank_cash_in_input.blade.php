@@ -19,6 +19,7 @@
             <div class="card mb-3">
                 <div class="card-header">{{__('Bank Cash In')}} Information</div>
                 <div class="card-body">
+                    <input type="hidden" name="token" id="token" value="{{$token}}">
                     <div class="row">
                         <div class="col-md-6">
                             {{-- <div class="form-group">

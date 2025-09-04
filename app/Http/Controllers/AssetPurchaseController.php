@@ -218,6 +218,7 @@ class AssetPurchaseController extends Controller
     public function edit($id)
     {
         $assetPurchase = AssetPurchase::findOrFail($id);
+        $is_tax = Supplier::where('supplier_code',$assetPurchase->supplier_code)->first()->pkp;
         $assetDetails = Asset::all();
         $tax = TaxMaster::where('tax_code','PPN')->first();
         $privileges = Auth::user()->roles->privileges['asset_purchase'];
@@ -238,7 +239,7 @@ class AssetPurchaseController extends Controller
         }
          // Add logic to determine editability (e.g., not closed)
 
-        return view('transaction.asset-purchase.asset_purchase_edit', compact('assetPurchase', 'assetDetails', 'privileges', 'editable','tax','note'));
+        return view('transaction.asset-purchase.asset_purchase_edit', compact('assetPurchase', 'assetDetails', 'privileges', 'editable','tax','note','is_tax'));
     }
 
     public function update(Request $request, $id)

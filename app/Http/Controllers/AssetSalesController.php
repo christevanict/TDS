@@ -213,6 +213,7 @@ class AssetSalesController extends Controller
     public function edit($id)
     {
         $assetSale = AssetSales::findOrFail($id);
+        $is_tax = Customer::where('customer_code',$assetSale->customer_code)->first()->pkp;
         $assetDetails = AssetDetail::all();
         $depreciations = Depreciation::all();
         $tax = TaxMaster::where('tax_code','PPN')->first();
@@ -233,7 +234,7 @@ class AssetSalesController extends Controller
             $editable = false;
         }
 
-        return view('transaction.asset-sales.asset_sales_edit', compact('assetSale', 'assetDetails', 'depreciations', 'privileges', 'editable','tax','note'));
+        return view('transaction.asset-sales.asset_sales_edit', compact('assetSale', 'assetDetails', 'depreciations', 'privileges', 'editable','tax','note','is_tax'));
     }
 
     public function update(Request $request, $id)

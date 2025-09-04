@@ -62,7 +62,7 @@ class ReceivablePaymentController extends Controller
     {
         $departments = Department::where('department_code', 'DP01')->first();
         $paymentMethods = PaymentMethod::orderBy('id', 'asc')->get();
-        $customers = Customer::orderBy('id', 'asc')->whereHas('hasGroup')->get();
+        $customers = Customer::orderBy('id', 'asc')->get();
         $receivables = Receivable::whereRaw('FLOOR(debt_balance) != 0')
             ->orderBy('document_date','asc')
             ->get();

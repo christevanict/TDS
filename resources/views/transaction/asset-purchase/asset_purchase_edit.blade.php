@@ -239,10 +239,14 @@
         const newCursorPosition = formattedValue.length - (value.length - cursorPosition);
         input.setSelectionRange(newCursorPosition, newCursorPosition);
     }
+    let is_tax = @json($is_tax)
 
     function calculateNominal() {
         let subtotal = parseFloat(document.getElementById('subtotal').value.replace(/,/g, '')) || 0;
-        let add_tax = parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        let add_tax = 0;
+        if(is_tax){
+            add_tax = parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        }
 
         document.getElementById('add_tax').value = add_tax.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
         let nominal = parseFloat(subtotal) + parseFloat(add_tax);

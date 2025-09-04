@@ -109,7 +109,8 @@
     const assets = @json($assetDetails);
     const customers = @json($customers);
     const tax = @json($tax);
-     let activeIndexCust = -1; // Track the active customer in the dropdown
+    let activeIndexCust = -1; // Track the active customer in the dropdown
+    let customerId = '';
 
     document.getElementById('search').addEventListener('input', function () {
         activeIndexCust = -1; // Reset active index on new input
@@ -184,7 +185,7 @@
 
     // Helper function to handle customer selection
     function selectCustomer(customer) {
-        let customerId = customer.customer_code;
+        customerId = customer.customer_code;
         document.getElementById('search').value = '';
         document.getElementById('customer_code').value = customer.customer_code;
         document.getElementById('customer_name').value = customer.customer_name;
@@ -281,8 +282,12 @@
     }
 
     function calculateNominal() {
+        let selectedCustomer = customers.find((e)=>e.customer_code==customerId);
         let subtotal = parseFloat(document.getElementById('subtotal').value.replace(/,/g, '')) || 0;
-        let add_tax = parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        let add_tax = 0;
+        if(selectedCustomer.pkp){
+            add_tax = parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        }
 
         document.getElementById('add_tax').value = add_tax.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
         let nominal = parseFloat(subtotal) + parseFloat(add_tax);

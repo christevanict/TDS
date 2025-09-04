@@ -33,7 +33,7 @@
                         <select id="date" name="date" class="form-select filter-date" required>
                             @php
                                 $currentMonth = now()->startOfMonth();
-                                $startMonth = \Carbon\Carbon::create(2025, 1, 1);
+                                $startMonth = \Carbon\Carbon::create(2024, 10, 1);
                                 $selectedDate = request()->query('date') ? \Carbon\Carbon::parse(request()->query('date'))->format('Y-m-d') : null;
 
                                 while ($startMonth <= $currentMonth) {

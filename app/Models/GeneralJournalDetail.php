@@ -27,6 +27,6 @@ class GeneralJournalDetail extends Model
     ];
 
     public function coa(){
-        return $this->belongsTo(CoA::class, 'account_number', 'account_number');
+        return $this->belongsTo(Coa::class, 'account_number', 'account_number');
     }
 }

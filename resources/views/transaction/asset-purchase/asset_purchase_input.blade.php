@@ -109,6 +109,7 @@
     const assets = @json($asset);
     const suppliers = @json($suppliers);
     const tax = @json($tax);
+    let supplierId='';
     function setupSearch(inputId, resultsContainerId, inputHid) {
         const inputElement = document.getElementById(inputId);
         const resultsContainer = document.getElementById(resultsContainerId);
@@ -253,7 +254,7 @@
 
     // Helper function to handle supplier selection
     function selectSupplier(supplier) {
-        let supplierId = supplier.supplier_code;
+        supplierId = supplier.supplier_code;
         document.getElementById('search').value = '';
         document.getElementById('supplier_code').value = supplier.supplier_code;
         document.getElementById('supplier_name').value = supplier.supplier_name;
@@ -294,9 +295,13 @@
     }
 
     function calculateNominal() {
+        let selectedSupplier = suppliers.find((e)=>e.supplier_code==supplierId);
         let subtotal = parseFloat(document.getElementById('subtotal').value.replace(/,/g, '')) || 0;
-        let add_tax = parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        let add_tax = 0;
 
+        if(selectedSupplier.pkp){
+            add_tax =  parseFloat(subtotal *(tax.tariff * tax.tax_base)/100).toFixed(0);
+        }
         document.getElementById('add_tax').value = add_tax.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
         let nominal = parseFloat(subtotal) + parseFloat(add_tax);
         let formattedNominal = nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
