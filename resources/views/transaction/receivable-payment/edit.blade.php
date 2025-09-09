@@ -167,10 +167,10 @@
                                     <input type="text" name="details[{{ $index }}][document_payment]" id="balance_{{ $index }}" class="form-control text-end" value="{{ number_format($detail->receivables->debt_balance+$detail->document_payment, 0, '.', ',') }}" readonly />
                                 </td>
                                 <td>
-                                    <input type="text"  id="nominal_{{ $index }}" class="form-control text-end nominal" value="{{ number_format(($detail->nominal - $detail->discount), 0, '.', ',') }}" />
+                                    <input type="text"  id="nominal_{{ $index }}" oninput="formatNumber(this)" class="form-control text-end nominal" value="{{ number_format(($detail->nominal - $detail->discount), 0, '.', ',') }}" />
                                 </td>
                                 <td>
-                                    <input type="text" name="details[{{ $index }}][discount]" id="discount_{{ $index }}" class="form-control text-end nominal" value="{{ number_format($detail->discount, 0, '.', ',') }}" />
+                                    <input type="text" name="details[{{ $index }}][discount]" id="discount_{{ $index }}" oninput="formatNumber(this)" class="form-control text-end nominal" value="{{ number_format($detail->discount, 0, '.', ',') }}" />
                                 </td>
                                 <td>
                                     <input type="text" name="details[{{ $index }}][nominal_payment]" id="nominal_payment_{{ $index }}" class="form-control text-end" value="{{ number_format($detail->nominal, 0, '.', ',') }}" readonly />
@@ -464,7 +464,7 @@
         $('#detailsModal').modal('show');
     });
 
-    const details = @json($receivable_detail_pays);
+    let details = @json($receivable_detail_pays);
     const paymentMethods = @json($paymentMethods);
 
     function initDataPayment(){
@@ -609,6 +609,7 @@
             `;
             $(`#pay-row`).append(hiddenInput);
         });
+        details = detailsArray;
 
         $('#total-payment-value').text(total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','));
         $('input[id="payment_details"]').val(JSON.stringify(detailsArray));
