@@ -410,7 +410,7 @@ class ReceivablePaymentController extends Controller
 
             foreach ($details as $detail) {
                 $receiv = Receivable::where('document_number', $detail->document_number)->first();
-                $receiv->debt_balance = $receiv->debt_balance + $detail->nominal + $detail->discount;
+                $receivable->debt_balance += ($detail->nominal);
                 $receiv->save();
             }
 

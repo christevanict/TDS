@@ -382,7 +382,7 @@ class PayablePaymentController extends Controller
             $details = PayablePaymentDetail::where('payable_payment_number', $payable_payment_number)->get();
             foreach ($details as $value) {
                 $debt = Debt::where('document_number', $value->document_number)->first();
-                $debt->debt_balance = $debt->debt_balance + $value->nominal_payment + $value->discount;
+                $debt->debt_balance += $value->nominal_payment;
                 $debt->save();
             }
             PayablePaymentDetailPay::where('payable_payment_number', $payable_payment_number)->delete();
