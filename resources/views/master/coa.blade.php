@@ -134,7 +134,7 @@
                         </div>
                         <label for="normal_balance" class="form-label">Normal Balance</label>
                         <select class="form-select" id="normal_balance" name="normal_balance" required>
-                            <option value="Debit">Debit</option>
+                            <option value="Debet">Debet</option>
                             <option value="Credit">Credit</option>
                         </select>
                         <label hidden for="company" class="form-label">Company</label>
