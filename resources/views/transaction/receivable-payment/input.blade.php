@@ -468,14 +468,14 @@ let customerId='';
         const disc_nominal = parseFloat(document.getElementById(`discount_${row}`).value.replace(/,/g, '')) || 0;
 
 
-        const nominalValue = (nominal+disc_nominal)+"";
+        const nominalValue = parseFloat(nominal+disc_nominal).toFixed(2)+"";
         const nominalInput = document.getElementById(`nominal_payment_${row}`);
         const remainBalanceInput = document.getElementById(`remaining_balance_${row}`);
 
         let formattedValue = nominalValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
         nominalInput.value = formattedValue; // Update nominal value
-        remainBalanceInput.value = (balance - nominalValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        remainBalanceInput.value = parseFloat(balance - nominalValue).toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         calculateTotals();
     }
 
@@ -497,10 +497,6 @@ let customerId='';
     });
 
     // document.getElementById('department_code').value = '';
-
-    function formatNumber(number) {
-        return new Intl.NumberFormat('id-ID').format(number);
-    }
 
     function updateCustomerInfo() {
         const customerSelect = document.getElementById('customer_code');
@@ -675,7 +671,7 @@ let customerId='';
         $('#invoiceTable .invoice-checkbox:checked').each(function() {
             const invoiceNumber = $(this).val();
             const documentDate = $(this).data('document-date').substring(0,10);
-            const debtBalance = $(this).data('debt-balance').debt_balance.substring(0, $(this).data('debt-balance').debt_balance.indexOf('.'));
+            const debtBalance = $(this).data('debt-balance').debt_balance.toString();
 
             selectedInvoices.push({
                 invoiceNumber: invoiceNumber,
@@ -697,7 +693,7 @@ let customerId='';
                         <input type="text" name="details[${rowCount}][document_date]" class="form-control" value="${invoice.documentDate}" readonly />
                     </td>
                     <td>
-                        <input type="text" name="details[${rowCount}][debt_balance]" id="balance_${rowCount}" class="form-control text-end" value="${invoice.debtBalance.toString().split('.')[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" readonly />
+                        <input type="text" name="details[${rowCount}][debt_balance]" id="balance_${rowCount}" class="form-control text-end" value="${invoice.debtBalance.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" readonly />
                     </td>
                     <td>
                         <input type="text" oninput="formatNumber(this)"  id="nominal_${rowCount}" class="form-control text-end" value="${invoice.debtBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" />
@@ -706,7 +702,7 @@ let customerId='';
                         <input type="text" id="discount_${rowCount}"  oninput="formatNumber(this)" name="details[${rowCount}][discount]"  class="form-control text-end" placeholder="Discount" value ="0"/>
                     </td>
                     <td>
-                        <input type="text" id="nominal_payment_${rowCount}" name="details[${rowCount}][nominal_payment]" max="${invoice.debtBalance}" class="form-control text-end nominal" value="${invoice.debtBalance.toString().split('.')[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" readonly/>
+                        <input type="text" id="nominal_payment_${rowCount}" name="details[${rowCount}][nominal_payment]" max="${invoice.debtBalance}" class="form-control text-end nominal" value="${invoice.debtBalance.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}" readonly/>
                     </td>
                     <td>
                         <input type="text" id="remaining_balance_${rowCount}" class="form-control text-end" value="0" readonly />
@@ -732,20 +728,48 @@ let customerId='';
     });
 
     function formatNumber(input) {
-        // Get the cursor position
         const cursorPosition = input.selectionStart;
-        input.value = input.value.replace(/[^0-9]/g, '');
-        // Remove any existing thousand separators
-        let value = input.value.replace(/,/g, '');
-
-        // Format the number with thousand separators
-        let formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-        // Set the new value
-        input.value = formattedValue;
-
-        // Adjust the cursor position
-        const newCursorPosition = formattedValue.length - (value.length - cursorPosition);
+        const originalValue = input.value;
+        let value = input.value.replace(/[^0-9.,-]/g, '');
+        const hasNegative = value.startsWith('-');
+        value = value.replace(/-/g, ''); // Remove all minus signs
+        if (hasNegative) {
+            value = '-' + value; // Re-add single minus sign at start if present
+        }
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts[1];
+        }
+        let [integerPart, decimalPart = ''] = value.split('.');
+        const isNegative = integerPart.startsWith('-');
+        integerPart = integerPart.replace(/-/g, ''); // Remove negative sign for formatting
+        integerPart = integerPart.replace(/,/g, '');
+        const formattedInteger = integerPart ? Number(integerPart).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }) : '';
+        let formattedValue = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+        if (isNegative && (formattedInteger || decimalPart)) {
+            formattedValue = '-' + formattedValue; // Add negative sign if valid number
+        } else if (isNegative && !formattedInteger && !decimalPart && originalValue === '-') {
+            formattedValue = '-'; // Handle case where input is just '-'
+        }
+        const originalSeparators = (originalValue.slice(0, cursorPosition).match(/,/g) || []).length;
+        const newSeparators = (formattedValue.slice(0, cursorPosition).match(/,/g) || []).length;
+        let newCursorPosition = cursorPosition + (newSeparators - originalSeparators);
+        if (originalValue[cursorPosition - 1] === '.' && !formattedValue.includes('.')) {
+            input.value = (isNegative ? '-' : '') + formattedInteger + '.';
+            newCursorPosition = input.value.length;
+        } else {
+            input.value = formattedValue;
+            if (originalValue[cursorPosition - 1] === '.' && formattedValue.includes('.')) {
+                newCursorPosition = formattedValue.indexOf('.') + 1;
+            }
+        }
+        if (isNegative && cursorPosition <= 1 && originalValue.startsWith('-')) {
+            newCursorPosition = Math.max(1, newCursorPosition); // Prevent cursor before negative sign
+        }
+        newCursorPosition = Math.min(Math.max(newCursorPosition, 0), input.value.length);
         input.setSelectionRange(newCursorPosition, newCursorPosition);
     }
 
