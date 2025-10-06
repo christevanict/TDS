@@ -358,7 +358,7 @@ class ReceivablePaymentController extends Controller
             foreach ($old_details as $detail) {
                 $receivable = Receivable::where('document_number', $detail->document_number)->first();
                 if ($receivable) {
-                    $receivable->debt_balance += ($detail->nominal);
+                    $receivable->debt_balance = $receiv->debt_balance + $detail->nominal;
                     $receivable->save();
                 }
             }
@@ -410,8 +410,10 @@ class ReceivablePaymentController extends Controller
 
             foreach ($details as $detail) {
                 $receiv = Receivable::where('document_number', $detail->document_number)->first();
-                $receivable->debt_balance += ($detail->nominal);
-                $receiv->save();
+                if($receiv){
+                    $receiv->debt_balance = $receiv->debt_balance + $detail->nominal;
+                    $receiv->save();
+                }
             }
 
             ReceivablePaymentDetail::where('receivable_payment_number', $receivable_payment_number)->delete();

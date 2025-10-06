@@ -221,6 +221,43 @@ $totalAmount = $salesInvoice->details->sum(function ($detail) {
                 <td style="text-align: right;  background-color: #f0f0f0;height:10px;;"><strong>{{ formatNumber($salesInvoice->total ?? 0) }}</strong></td>
             </tr>
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="border: none;"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2">Approved By</td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2"></td>
+            </tr>
+            <tr>
+                <td style="border: none;" colspan="2"></td>
+                <td style="border: none; text-align:center" colspan="2">Yossie</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
