@@ -49,7 +49,7 @@
                         <td>{{$loop->iteration}}</td>
                         <td>{{ $cashOut->bank_cash_out_number }}</td> <!-- Updated field to match cash out -->
                         <td>{{ \Carbon\Carbon::parse($cashOut->bank_cash_out_date)->format('d M Y') }}</td> <!-- Updated field to match cash out -->
-                        <td>Rp {{number_format($cashOut->nominal,0,'.',',')}}</td>
+                        <td class="text-end">Rp {{number_format($cashOut->nominal,2,'.',',')}}</td>
                         <td>
                             <a href="{{ route('transaction.bank_cash_out.edit', $cashOut->id) }}" class="btn btn-warning btn-edit"><i class="material-icons-outlined">edit</i></a>
                             <a href="{{ route('transaction.bank_cash_out.print', $cashOut->id) }}" class="btn btn-primary btn-print @if(!in_array('print', $privileges)) disabled @endif" target="_blank"><i class="material-icons-outlined">print</i></a>

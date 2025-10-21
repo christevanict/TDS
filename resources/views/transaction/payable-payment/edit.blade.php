@@ -628,6 +628,7 @@ table {
 
     $(document).on('click', '.deleteRow', function() {
         $(this).closest('tr').remove();
+        rowCount--;
         calculateTotals();
     });
 

@@ -63,8 +63,8 @@ class JournalController extends Controller
                 'account_name' => $journal->coas->account_name,
                 'document_number' => $journal->document_number,
                 'document_date' => Carbon::parse($journal->document_date)->format('d M Y'), // Format date as needed
-                'debet_nominal' => number_format($journal->debet_nominal, 0, '', '.'),
-                'credit_nominal' => number_format($journal->credit_nominal, 0, '', '.'),
+                'debet_nominal' => number_format($journal->debet_nominal, 2, '.', ','),
+                'credit_nominal' => number_format($journal->credit_nominal, 2, '.', ','),
                 'notes' => $journal->notes,
             ];
         });
@@ -164,10 +164,10 @@ class JournalController extends Controller
                         'document_number' => 'SAWAL',
                         'document_date' => '',
                         'account_name' => $journal->account_name,
-                        'notes' => $journal->notes,
-                        'debet_nominal' => number_format($debet, 0, '', '.'),
-                        'credit_nominal' => number_format($credit, 0, '', '.'),
-                        'balance' => number_format($balance, 0, '', '.'),
+                        'notes' => '',
+                        'debet_nominal' => number_format($debet, 2, '.', ','),
+                        'credit_nominal' => number_format($credit, 2, '.', ','),
+                        'balance' => number_format($balance, 2, '.', ','),
                         'is_sawal' => true
                     ];
                 } else {
@@ -178,9 +178,9 @@ class JournalController extends Controller
                         'document_date' => '',
                         'account_name' => $journal->account_name,
                         'notes' => $journal->notes,
-                        'debet_nominal' => number_format(0, 0, '', '.'),
-                        'credit_nominal' => number_format(0, 0, '', '.'),
-                        'balance' => number_format(0, 0, '', '.'),
+                        'debet_nominal' => number_format(0, 2, '.', ','),
+                        'credit_nominal' => number_format(0, 2, '.', ','),
+                        'balance' => number_format(0, 2, '.', ','),
                         'is_sawal' => true
                     ];
                 }
@@ -197,9 +197,9 @@ class JournalController extends Controller
                 'document_date' => Carbon::parse($journal->document_date)->format('d M Y'),
                 'account_name' => $journal->account_name,
                 'notes' => $journal->notes,
-                'debet_nominal' => number_format($journal->debet_nominal, 0, '', '.'),
-                'credit_nominal' => number_format($journal->credit_nominal, 0, '', '.'),
-                'balance' => number_format($totalBalance, 0, '', '.'),
+                'debet_nominal' => number_format($journal->debet_nominal, 2, '.', ','),
+                'credit_nominal' => number_format($journal->credit_nominal, 2, '.', ','),
+                'balance' => number_format($totalBalance, 2, '.', ','),
                 'is_sawal' => false
             ];
         }
@@ -276,7 +276,6 @@ class JournalController extends Controller
         $dateTo = $selectedDate->endOfMonth()->toDateTimeString();
 
         $coaId = $request->input('coa_id');
-
         // SAWAL Query (before date_from)
         $sawalQuery = DB::table('journal as j')
             ->join('coa as c', 'j.account_number', '=', 'c.account_number')

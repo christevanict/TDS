@@ -172,33 +172,12 @@
                 { data: 'notes' },
                 {
                     data: 'debet_nominal',
-                    render: function(data, type, row) {
-                        if (type === 'display' || type === 'filter') {
-                            // Format number with comma as thousand separator and period as decimal
-                            return parseFloat(data.replaceAll('.','').replace(',','.')).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                        return data; // Return raw data for sorting and other purposes
-                    }
                 },
                 {
                     data: 'credit_nominal',
-                    render: function(data, type, row) {
-                        if (type === 'display' || type === 'filter') {
-                            // Format number with comma as thousand separator and period as decimal
-                            return parseFloat(data.replaceAll('.','').replace(',','.')).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                        return data; // Return raw data for sorting and other purposes
-                    }
                 },
                 {
                     data: 'balance',
-                    render: function(data, type, row) {
-                        if (type === 'display' || type === 'filter') {
-                            // Format number with comma as thousand separator and period as decimal
-                            return parseFloat(data.replaceAll('.','').replace(',','.')).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                        return data; // Return raw data for sorting and other purposes
-                    }
                 },
             ]
         });
