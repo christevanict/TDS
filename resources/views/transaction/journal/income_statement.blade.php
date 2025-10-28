@@ -140,7 +140,7 @@
                     extend: 'excel',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_LaporanLabaRugi_'+accountName;
+                        return 'TerraDataSolusi_LaporanLabaRugi_'+accountName;
                     }
                 },
                 {
@@ -148,7 +148,7 @@
                     title: '',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_LaporanLabaRugi_'+accountName;
+                        return 'TerraDataSolusi_LaporanLabaRugi_'+accountName;
                     },
                     customize: function(doc) {
                         // Remove default table header
@@ -178,7 +178,7 @@
                         doc.content = [{
                             text: [
                                 { text: 'Laporan Laba Rugi\n', fontSize: 14, bold: true },
-                                { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                 { text: `Untuk periode 1 ${monthName} 2025 sampai dengan ${lastDayOfMonth} ${monthName} 2025`, fontSize: 12 }
                             ],
                             alignment: 'center',

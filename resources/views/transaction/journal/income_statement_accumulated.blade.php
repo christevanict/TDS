@@ -166,7 +166,7 @@
                     filename: function() {
                         var dateFrom = $('#date_from').find('option:selected').text().replace(' ','');
                         var dateTo = $('#date_to').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
+                        return 'TerraDataSolusi_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
                     }
                 },
                 {
@@ -175,7 +175,7 @@
                     filename: function() {
                         var dateFrom = $('#date_from').find('option:selected').text().replace(' ','');
                         var dateTo = $('#date_to').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
+                        return 'TerraDataSolusi_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
                     },
                     customize: function(doc) {
                         // Remove default table header
@@ -208,7 +208,7 @@
                         doc.content = [{
                             text: [
                                 { text: 'Laporan Laba Rugi Akumulasi\n', fontSize: 14, bold: true },
-                                { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                 { text: `Untuk periode ${startMonth} ${startYear} sampai dengan ${endMonth} ${endYear}`, fontSize: 12 }
                             ],
                             alignment: 'center',
@@ -380,7 +380,7 @@
                         filename: function() {
                             var dateFrom = $('#date_from').find('option:selected').text().replace(' ','');
                             var dateTo = $('#date_to').find('option:selected').text().replace(' ','');
-                            return 'MajuBersama_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
+                            return 'TerraDataSolusi_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
                         }
                      },
                     {
@@ -389,7 +389,7 @@
                         filename: function() {
                             var dateFrom = $('#date_from').find('option:selected').text().replace(' ','');
                             var dateTo = $('#date_to').find('option:selected').text().replace(' ','');
-                            return 'MajuBersama_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
+                            return 'TerraDataSolusi_LaporanLabaRugiAkumulasi_'+dateFrom+'_to_'+dateTo;
                         },
                         customize: function(doc) {
                             // Remove default table header
@@ -414,7 +414,7 @@
                             doc.content = [{
                                 text: [
                                     { text: 'Laporan Laba Rugi Akumulasi\n', fontSize: 14, bold: true },
-                                    { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                    { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                     { text: `Untuk periode ${startMonth} ${startYear} sampai dengan ${endMonth} ${endYear}`, fontSize: 12 }
                                 ],
                                 alignment: 'center',

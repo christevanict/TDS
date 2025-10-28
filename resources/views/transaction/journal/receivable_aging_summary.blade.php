@@ -155,7 +155,7 @@
                     filename: function() {
                         var dateFrom = formatDateToDDMMMYYYY($('#start_date').val());
                         var dateTo = formatDateToDDMMMYYYY($('#end_date').val());
-                        return 'MajuBersama_RingkasanUmurPiutang_'+ dateFrom + '_to_' + dateTo;
+                        return 'TerraDataSolusi_RingkasanUmurPiutang_'+ dateFrom + '_to_' + dateTo;
                     },
                     exportOptions: {
                         columns: [0, 1, 2, 3, 4, 5, 6]
@@ -167,7 +167,7 @@
                     filename: function() {
                         var dateFrom = formatDateToDDMMMYYYY($('#start_date').val());
                         var dateTo = formatDateToDDMMMYYYY($('#end_date').val());
-                        return 'MajuBersama_RingkasanUmurPiutang_'+ dateFrom + '_to_' + dateTo;
+                        return 'TerraDataSolusi_RingkasanUmurPiutang_'+ dateFrom + '_to_' + dateTo;
                     },
                     pageSize: 'A4',
                     orientation: 'potrait',
@@ -210,7 +210,7 @@
                         doc.content = [{
                             text: [
                                 { text: 'Laporan Ringkasan Umur Piutang\n', fontSize: 14, bold: true },
-                                { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                 { text: `Untuk periode ${formattedDateFrom} sampai dengan ${formattedDateTo}`, fontSize: 12 }
                             ],
                             alignment: 'center',

@@ -150,7 +150,7 @@
                     extend: 'excel',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_NeracaKeuangan_'+accountName;
+                        return 'TerraDataSolusi_NeracaKeuangan_'+accountName;
                     }
                 },
                 {
@@ -158,7 +158,7 @@
                     title: '',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_NeracaKeuangan_'+accountName;
+                        return 'TerraDataSolusi_NeracaKeuangan_'+accountName;
                     },
                     customize: function(doc) {
                         // Remove default table header
@@ -184,7 +184,7 @@
                         doc.content = [{
                             text: [
                                 { text: 'Neraca\n', fontSize: 14, bold: true },
-                                { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                 { text: `Per ${lastDayOfMonth} ${monthName} ${year}`, fontSize: 12 }
                             ],
                             alignment: 'center',

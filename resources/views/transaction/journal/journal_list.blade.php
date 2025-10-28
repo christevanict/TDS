@@ -145,7 +145,7 @@
                 filename: function() {
                     var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                     var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
-                    return 'MajuBersama_LaporanJurnalUmum_' + dateFrom + '_to_' + dateTo;
+                    return 'TerraDataSolusi_LaporanJurnalUmum_' + dateFrom + '_to_' + dateTo;
                 }
             },
             {
@@ -153,7 +153,7 @@
                 filename: function() {
                     var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                     var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
-                    return 'MajuBersama_LaporanJurnalUmum_' + dateFrom + '_to_' + dateTo;
+                    return 'TerraDataSolusi_LaporanJurnalUmum_' + dateFrom + '_to_' + dateTo;
                 }
             }],
             @endif

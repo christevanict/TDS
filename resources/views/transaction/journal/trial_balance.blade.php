@@ -146,14 +146,14 @@
                     extend: 'excel',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_NeracaSaldo_'+accountName;
+                        return 'TerraDataSolusi_NeracaSaldo_'+accountName;
                     }
                 },
                 {
                     extend: 'pdf',
                     filename: function() {
                         var accountName = $('#date').find('option:selected').text().replace(' ','');
-                        return 'MajuBersama_NeracaSaldo_'+accountName;
+                        return 'TerraDataSolusi_NeracaSaldo_'+accountName;
                     }
                 }],
                 @endif

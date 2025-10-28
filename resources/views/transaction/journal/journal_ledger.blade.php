@@ -145,7 +145,7 @@
                     var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                     var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
                     var accountName = $('#coa_id').find('option:selected').text().replace(' ','');
-                    return 'MajuBersama_LaporanBukuBesar_'+accountName+'_' + dateFrom + '_to_' + dateTo;
+                    return 'TerraDataSolusi_LaporanBukuBesar_'+accountName+'_' + dateFrom + '_to_' + dateTo;
                 }
             },
             {
@@ -154,7 +154,7 @@
                     var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                     var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
                     var accountName = $('#coa_id').find('option:selected').text().replace(' ','');
-                    return 'MajuBersama_LaporanBukuBesar_'+accountName+'_' + dateFrom + '_to_' + dateTo;
+                    return 'TerraDataSolusi_LaporanBukuBesar_'+accountName+'_' + dateFrom + '_to_' + dateTo;
                 }
             }],
             @endif

@@ -232,7 +232,7 @@
                     filename: function() {
                         var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                         var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
-                        return 'MajuBersama_LaporanPiutang_'+ dateFrom + '_to_' + dateTo;
+                        return 'TerraDataSolusi_LaporanPiutang_'+ dateFrom + '_to_' + dateTo;
                     }
                 },
                 {
@@ -241,7 +241,7 @@
                     filename: function() {
                         var dateFrom = formatDateToDDMMMYYYY($('#date_from').val());
                         var dateTo = formatDateToDDMMMYYYY($('#date_to').val());
-                        return 'MajuBersama_LaporanPiutang_'+ dateFrom + '_to_' + dateTo;
+                        return 'TerraDataSolusi_LaporanPiutang_'+ dateFrom + '_to_' + dateTo;
                     },
                     pageSize: 'A4',
                     orientation: 'portrait',
@@ -282,7 +282,7 @@
                         doc.content = [{
                             text: [
                                 { text: 'Laporan Piutang\n', fontSize: 14, bold: true },
-                                { text: 'CV Maju Bersama\n', fontSize: 12 },
+                                { text: 'PT Terra Data Solusi\n', fontSize: 12 },
                                 { text: `Untuk periode ${formattedDateFrom} sampai dengan ${formattedDateTo}`, fontSize: 12 }
                             ],
                             alignment: 'center',
